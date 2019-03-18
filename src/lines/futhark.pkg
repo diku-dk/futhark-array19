@@ -1,0 +1,6 @@
+require {
+  github.com/diku-dk/cpprandom 1.1.4 #7dd47f3f2f5a8fa24d6847b34d9f8a9091b5d94a
+  github.com/athas/matte 0.1.1 #24f332e6ff8b5872b950cfcbead9b2f7c6571490
+  github.com/diku-dk/segmented 0.2.2 #d0e1f83930802a10754a91906d95c22f367d4dae
+  github.com/diku-dk/sorts 0.3.3 #5114be4c7140ac6ce56c8cbe8298b7df1152ab18
+}
