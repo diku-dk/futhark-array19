@@ -7,7 +7,7 @@ type csr 't = {row_off: []i32, col_idx: []i32, vals: []t}
 -- reduction with + and 0.
 
 let smvm ({row_off,col_idx,vals} : csr i32)
-         (v:[]i32) : []i32 =
+         (v:[]i32) : []i32 = unsafe
   let rows = map (\i -> (i,
                         row_off[i],
                         row_off[i+1]-row_off[i]))
