@@ -99,7 +99,7 @@ let generate_terrain
                           ps[i-1,j-1].y + ps[i-1,j].y + ps[i-1,j+1].y +
                           ps[i,  j-1].y +               ps[i,  j+1].y +
                           ps[i+1,j-1].y + ps[i+1,j].y + ps[i+1,j+1].y) / 8
-                        else p
+                        else p with y = 0
                   )) points'
 
   -- Make triangles.
