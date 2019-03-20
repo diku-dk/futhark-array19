@@ -5,7 +5,7 @@ import "terrain"
 type keys_state = {shift: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, minus: bool, plus: bool}
 
-type text_content = (f32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
+type text_content = (i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
 module lys: lys with text_content = text_content = {
   type state = {h: i32, w: i32,
                 view_dist: f32, -- another way of expressing the FOV
@@ -17,10 +17,10 @@ module lys: lys with text_content = text_content = {
 
   type text_content = text_content
 
-  let text_format = "FPS: %.2f ms\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.2f, %.2f, %.2f)\nOrientation: (%.2f, %.2f, %.2f)\nView distance (FOV): %.2f\nDraw distance: %.2f"
+  let text_format = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.2f, %.2f, %.2f)\nOrientation: (%.2f, %.2f, %.2f)\nView distance (FOV): %.2f\nDraw distance: %.2f"
 
   let text_content (fps: f32) (s: state): text_content =
-    (fps, length s.triangles_coloured, length s.triangles_in_view,
+    (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
      s.camera.position.x, s.camera.position.y, s.camera.position.z,
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
      s.view_dist, s.draw_dist)
