@@ -133,7 +133,7 @@ let find_triangles_in_view
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
-    (triangles_coloured: []triangle_coloured): [](triangle_projected, argb.colour) =
+    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_projected, argb.colour) =
   let triangles = map (.triangle) triangles_coloured
   let triangles_normalized = map (normalize_triangle camera) triangles
   let triangles_projected = map (project_triangle h w view_dist)
@@ -171,7 +171,7 @@ let render_triangles_in_view'
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
-    (triangles_coloured: []triangle_coloured): [h][w]argb.colour =
+    (triangles_coloured: [](triangle_coloured argb.colour)): [h][w]argb.colour =
   let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
                                                  camera triangles_coloured
   let (triangles_projected, colours) = unzip triangles_in_view
