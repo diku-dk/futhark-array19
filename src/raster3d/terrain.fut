@@ -11,6 +11,7 @@ let generate_terrain
   (width: i32)
   (size: i32)
   (fluct: f32)
+  (smooth_iterations: i32)
   (seed: i32): []triangle_coloured =
   let size_vert = r32 size / 2 ** 0.5
 
@@ -38,16 +39,17 @@ let generate_terrain
 
   -- Smooth areas with a stencil.
   let points'' =
-    tabulate_2d depth width
-                (\i j ->
-                   let p = points'[i,j]
-                   in if i >= 1 && i < depth - 1 && j >= 1 && j < width - 1
-                      then p with y = unsafe (
-                        points'[i-1,j-1].y + points'[i-1,j].y + points'[i-1,j+1].y +
-                        points'[i,  j-1].y +                    points'[i,  j+1].y +
-                        points'[i+1,j-1].y + points'[i+1,j].y + points'[i+1,j+1].y) / 8
-                      else p
-                )
+    iterate smooth_iterations (\ps ->
+      tabulate_2d depth width
+                  (\i j ->
+                     let p = ps[i,j]
+                     in if i >= 1 && i < depth - 1 && j >= 1 && j < width - 1
+                        then p with y = unsafe (
+                          ps[i-1,j-1].y + ps[i-1,j].y + ps[i-1,j+1].y +
+                          ps[i,  j-1].y +               ps[i,  j+1].y +
+                          ps[i+1,j-1].y + ps[i+1,j].y + ps[i+1,j+1].y) / 8
+                        else p
+                  )) points'
 
   -- Make triangles.
   let triangles =
