@@ -117,16 +117,20 @@ let generate_terrain
          ) points''[:depth-1] points''[1:] (0..<depth-1)
 
   -- Colour triangles.
+  let max_y = reduce f32.max (-fluct) (flatten triangles |> map (.1.y))
+  let min_y = reduce f32.min fluct (flatten triangles |> map (.1.y))
+
   let n_triangles = (depth - 1, 2 * (width - 1))
   let rngs = rng
              |> rng.split_rng (n_triangles.1 * n_triangles.2)
              |> unflatten n_triangles.1 n_triangles.2
   let triangles_coloured =
     map2 (map2 (\rng t ->
-                  let (rng, h) = dist.rand (0.0, 360.0) rng
+                  let h = 360.0 * ((t.1.y - min_y) / (max_y - min_y))
+                  let (rng, h') = dist.rand (h - 30.0, h + 30.0) rng
                   let (rng, s) = dist.rand (0.5, 1.0) rng
                   let (_rng, v) = dist.rand (0.5, 1.0) rng
-                  in {triangle=t, colour=(h, s, v)}
+                  in {triangle=t, colour=(h', s, v)}
                )) rngs triangles
 
   -- Smooth the colours.

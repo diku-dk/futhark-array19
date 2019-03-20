@@ -34,7 +34,7 @@ module lys: lys with text_content = text_content = {
                   orientation={x=0, y=0, z=0}}
 
     let terrain_seed = 3134
-    let triangles_coloured = generate_terrain 1000 1000 300 100000 64 53 terrain_seed
+    let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 terrain_seed
     let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
                                                    camera triangles_coloured
     in {w, h,
