@@ -1,0 +1,7 @@
+require {
+  github.com/diku-dk/lys 0.0.0-20190319165447+78d07a23f6900d69f31c13ecfbbd25592fa90155
+  github.com/athas/vector 0.2.3 #91d8983c45d12c63cebecf2ffb73a2bd3b7215ed
+  github.com/athas/matte 0.1.1 #24f332e6ff8b5872b950cfcbead9b2f7c6571490
+  github.com/diku-dk/segmented 0.2.4 #085dcb98a831ad7b7193f6d68a9073cf0d2f795e
+  github.com/diku-dk/cpprandom 1.1.4 #7dd47f3f2f5a8fa24d6847b34d9f8a9091b5d94a
+}

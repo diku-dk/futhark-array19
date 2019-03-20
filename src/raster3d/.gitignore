@@ -1,0 +1,5 @@
+/lib
+/*.o
+/*_wrapper*
+/*_printf*
+/demo
