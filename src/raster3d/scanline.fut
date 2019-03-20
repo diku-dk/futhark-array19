@@ -35,15 +35,15 @@ let get_line_in_triangle 'a
   in if i <= q.y - p.y then     -- upper half
      let sl1 = dxdy p q
      let sl2 = dxdy p r
-     let x1 = p.x + t32 (sl1 * r32 i)
-     let x2 = p.x + t32 (sl2 * r32 i)
+     let x1 = p.x + t32 (f32.round (sl1 * r32 i))
+     let x2 = p.x + t32 (f32.round (sl2 * r32 i))
      in (({x=x1, y}, {x=x2, y}), aux)
      else                       -- lower half
      let sl1 = dxdy r p
      let sl2 = dxdy r q
      let dy = (r.y - p.y) - i
-     let x1 = r.x - t32 (sl1 * r32 dy)
-     let x2 = r.x - t32 (sl2 * r32 dy)
+     let x1 = r.x - t32 (f32.round (sl1 * r32 dy))
+     let x2 = r.x - t32 (f32.round (sl2 * r32 dy))
      in (({x=x1, y}, {x=x2, y}), aux)
 
 let lines_of_triangles 'a [n]
