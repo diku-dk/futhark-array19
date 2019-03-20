@@ -1,8 +1,9 @@
 DEV ?= AMD
 
 .PHONY: all
-all: smvm.c.exe primes.c.exe primes0.c.exe primes_count.c.exe primes_count0.c.exe\
-     smvm.opencl.exe primes.opencl.exe primes0.opencl.exe primes_count.opencl.exe primes_count0.opencl.exe
+all: smvm.c.exe primes.c.exe primes0.c.exe primes_count.c.exe primes_count0.c.exe \
+     smvm.opencl.exe primes.opencl.exe primes0.opencl.exe primes_count.opencl.exe primes_count0.opencl.exe \
+     primes.plainc.exe
 
 .PHONY: run
 run: primes.c.out primes0.c.out \
@@ -20,6 +21,9 @@ run: primes.c.out primes0.c.out \
 %.c.out: %.c.exe %.in
 	cat $*.in | ./$< -t $*.c.t > $@
 
+%.plainc.out: %.plainc.exe %.in
+	cat $*.in | time ./$< > $@ 2> $*.plainc.t
+
 # Compilation rules
 %.c.exe: %.fut
 	futhark c -o $@ $<
@@ -27,7 +31,10 @@ run: primes.c.out primes0.c.out \
 %.opencl.exe: %.fut
 	futhark opencl -o $@ $<
 
+%.plainc.exe: %.c
+	gcc -o $@ $<
+
 # Cleanup
 .PHONY: clean
 clean:
-	rm -f *~ *.exe.c *.exe *.out
+	rm -f *~ *.exe.c *.exe *.out *.t
