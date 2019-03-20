@@ -113,7 +113,7 @@ let render_projected_triangles [n]
          let (bary_a, bary_b) = (barycentric_coordinates pa ta,
                                  barycentric_coordinates pb tb)
          let (z_a, z_b) = (interpolate_z ta bary_a, interpolate_z tb bary_b)
-         in if z_a < z_b
+         in if (z_a >= 0 && z_a < z_b) || z_b < 0
             then (loca, ia)
             else (locb, ib)
 
