@@ -27,13 +27,12 @@ module lys: lys with text_content = text_content = {
 
   let text_colour = const argb.white
 
-  let init (h: i32) (w: i32): state =
+  let init terrain_seed (h: i32) (w: i32): state =
     let view_dist = 600
     let draw_dist = 100000
     let camera = {position={x=150000, y= -4000, z=100000},
                   orientation={x=0, y=0, z=0}}
 
-    let terrain_seed = 3134
     let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 terrain_seed
     let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
                                                    camera triangles_coloured
