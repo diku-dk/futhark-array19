@@ -127,3 +127,9 @@ module lys: lys with text_content = text_content = {
   let wheel _ _ s = s
   let grab_mouse = false
 }
+
+-- ==
+-- entry: benchmark
+-- compiled input { 800 600 }
+entry benchmark (w: i32) (h: i32) =
+  lys.init 0 h w |> lys.render
