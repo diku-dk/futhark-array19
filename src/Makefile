@@ -32,7 +32,7 @@ run: primes.c.out primes0.c.out \
 	futhark opencl -o $@ $<
 
 %.plainc.exe: %.c
-	gcc -o $@ $< -lm
+	gcc -o $@ $< -lm -std=c99
 
 # Cleanup
 .PHONY: clean
