@@ -36,7 +36,7 @@ let compare (v1:i32) (v2:i32) : i32 =
   if v2 > v1 then 1 else if v1 > v2 then -1 else 0
 
 let slope ((x1,y1):point0) ((x2,y2):point0) : f32 =
-  if x2==x1 then if y2>y1 then r32(1) else r32(-1)
+  if x2==x1 then if y2>y1 then 1 else -1
                  else r32(y2-y1) / r32(abs(x2-x1))
 
 -- Parallel flattened algorithm for turning lines into
@@ -91,7 +91,7 @@ let dxdy (a:point0) (b:point0) : f32 =
   let dx = b.1 - a.1
   let dy = b.2 - a.2
   in if dy == 0 then f32.i32 0
-     else f32.i32 dx f32./ f32.i32 dy
+     else f32.i32 dx / f32.i32 dy
 
 let get_line_in_triangle ((p,q,r,z,c):triangle) (i:i32) =
   let y = p.2 + i
