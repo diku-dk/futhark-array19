@@ -44,6 +44,17 @@ let expand 'a 'b (sz: a -> i32) (get: a -> i32 -> b)
   in map2 (\i j -> get (unsafe arr[i]) j)
                        idxs iotas
 
+let expand_pad 'a 'b [n] (sz: a -> i32) (get: a -> i32 -> b) (z:b)
+                         (arr:[n]a) : []b =
+  let szs = map sz arr
+  let msz = reduce i32.max 0 szs
+  in flatten <|
+     map2 (\a s ->
+  	     map (\j -> if j > s then z
+			else get a j
+		 ) (iota msz)
+          ) arr szs
+
 let expand_with_flags 'a 'b
                       (sz: a -> i32) (get: a -> i32 -> b)
                       (arr:[]a) : ([]b, []bool)  =

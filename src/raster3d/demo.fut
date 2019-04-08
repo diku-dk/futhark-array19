@@ -25,7 +25,7 @@ module lys: lys with text_content = text_content = {
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
      s.view_dist, s.draw_dist)
 
-  let text_colour = const argb.white
+  let text_colour = const argb.blue
 
   let init terrain_seed (h: i32) (w: i32): state =
     let view_dist = 600

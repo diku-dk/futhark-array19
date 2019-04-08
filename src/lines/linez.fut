@@ -62,9 +62,22 @@ let get_point_in_line ({p1,p2,z,color}:line) (i:i32) : point =
 	      z,
 	      color}
 
+let expand_pad 'a 'b [n] (sz: a -> i32) (get: a -> i32 -> b) (z:b)
+                         (arr:[n]a) : []b =
+  let szs = map sz arr
+  let msz = reduce i32.max 0 szs
+  in flatten <|
+     map2 (\a s ->
+  	     map (\j -> if j > s then z
+			else get a j
+		 ) (iota msz)
+          ) arr szs
+
 let drawlines [n] (h:i32) (w:i32)
                   (lines:[n]line) :[h][w]i32 =
-  let ps = expand points_in_line get_point_in_line lines
+  --let ps = expand points_in_line get_point_in_line lines
+  let ps = expand_pad points_in_line get_point_in_line
+                  {p=(-1,-1),color=argb.white,z=0} lines
   let xs = map (.p.1) ps
   let ys = map (.p.2) ps
   let vs = map (\p -> {z=p.z,color=p.color}) ps

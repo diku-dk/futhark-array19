@@ -119,7 +119,7 @@ let render_projected_triangles [n]
 
   let pixel_color (_loc, i): argb.colour =
     if i == -1
-    then argb.black
+    then argb.white
     else unsafe colours[i]
 
   let pixels = replicate (h * w) empty

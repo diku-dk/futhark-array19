@@ -7,9 +7,8 @@ let primes (n:i32) =
              then c*c
              else n+1
     let sz (p:i32) = (c2 - p) / p
-    let get p i = (2+i)*p
-    let sieves : []i32 = map (\p -> p-c)
-                             (expand sz get acc)
+    let get p i = (2+i)*p - c
+    let sieves : []i32 = expand sz get acc -- computed non-primes offset by c
     let vs = replicate (c2-c) 1
     let vs = scatter vs sieves
                      (replicate (length sieves) 0)
