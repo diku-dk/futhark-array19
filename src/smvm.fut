@@ -86,7 +86,14 @@ let matmul [n][m][k] (xss: [n][m]f32) (yss: [m][k]f32) =
 let mvm [n][m] (xss: [n][m]f32) (v: [m]f32) : [n]f32 =
   map (\xs -> dotprod xs v) xss
 
-entry test_dense (n:i32) : f32 =
-  let m = copy (replicate n (replicate n 0.9f32))
-  let v = copy (replicate n 0.8f32)
-  in reduce (+) 0f32 (mvm m v)
+entry test_dense [n] (m: [][n]f32) (v: [n]f32) : f32 =
+  reduce (+) 0f32 (mvm m v)
+
+entry gen_dense (seed:i32) (n:i32) : ([n][n]f32, [n]f32) =
+  let rng = rng.rng_from_seed [seed]
+  let rngs = rng.split_rng n rng
+  let (rngs,vector) = unzip <| map (RD.rand (0f32,1f32)) rngs
+  let rng = rng.join_rng rngs
+  let rngs = rng.split_rng (n*n) rng
+  let (_,flatmat) = unzip <| map (RD.rand (0f32,1f32)) rngs
+  in (unflatten n n flatmat, vector)

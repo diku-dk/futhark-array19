@@ -41,39 +41,65 @@ run: primes.c.out primes0.c.out \
 # Cleanup
 .PHONY: clean
 clean:
-	rm -rf *~ *.exe.c *.exe *.out *.t smvm_data
-
-# Experiments with sparse matrix - vector multiplication
-.PHONY: smvm_run
-smvm_run:
-#	rm -rf smvm_data
-#	make smvm_data/smvm_tst1.c.out smvm_data/smvm_tst2.c.out smvm_data/smvm_tst3.c.out smvm_data/smvm_tst4.c.out smvm_data/smvm_tst5.c.out \
-#	     smvm_data/smvm_tst1.opencl.out smvm_data/smvm_tst2.opencl.out smvm_data/smvm_tst3.opencl.out smvm_data/smvm_tst4.opencl.out smvm_data/smvm_tst5.opencl.out
-	make smvm_data/smvm_tst1.c.tmavg smvm_data/smvm_tst2.c.tmavg smvm_data/smvm_tst3.c.tmavg smvm_data/smvm_tst4.c.tmavg smvm_data/smvm_tst5.c.tmavg \
-	     smvm_data/smvm_tst1.opencl.tmavg smvm_data/smvm_tst2.opencl.tmavg smvm_data/smvm_tst3.opencl.tmavg smvm_data/smvm_tst4.opencl.tmavg smvm_data/smvm_tst5.opencl.tmavg
+	rm -rf *~ *.exe.c *.exe *.out *.t smvm_data/*.out smvm_data/*.tm smvm_data/*.tmavg
 
 # SMVM Data Generation
-ROWS=8000
+ROWS=10000
 
+# Experiments with sparse matrix - vector multiplication
+.PHONY: smvm_prepare
+smvm_prepare:
+	rm -rf smvm_data
+	make smvm_data/smvm_tst1.in smvm_data/smvm_tst2.in smvm_data/smvm_tst3.in smvm_data/smvm_tst4.in \
+             smvm_data/smvm_tst5.in smvm_data/smvm_tst10.in smvm_data/smvm_tst15.in smvm_data/smvm_tst20.in \
+             smvm_data/smvm_dense.in
+
+# Assumes that "make smvm_prepare" has been run
+.PHONY: smvm_run
+smvm_run: smvm_data/smvm_tst1.c.tmavg smvm_data/smvm_tst2.c.tmavg smvm_data/smvm_tst3.c.tmavg \
+          smvm_data/smvm_tst4.c.tmavg smvm_data/smvm_tst5.c.tmavg smvm_data/smvm_tst10.c.tmavg \
+          smvm_data/smvm_tst15.c.tmavg smvm_data/smvm_tst20.c.tmavg \
+          smvm_data/smvm_tst1.opencl.tmavg smvm_data/smvm_tst2.opencl.tmavg \
+          smvm_data/smvm_tst3.opencl.tmavg smvm_data/smvm_tst4.opencl.tmavg \
+          smvm_data/smvm_tst5.opencl.tmavg smvm_data/smvm_tst10.opencl.tmavg \
+          smvm_data/smvm_tst15.opencl.tmavg smvm_data/smvm_tst20.opencl.tmavg \
+          smvm_data/smvm_dense.c.tmavg smvm_data/smvm_dense.opencl.tmavg
+
+# Assumes that "make smvm_run" has been run
+# Run "make clean && make smvm_run && make smvm_report"
 .PHONY: smvm_report
 smvm_report:
-	@echo "SMVM report"
-	@echo "C 1-5 (density)"
-	@cat smvm_data/smvm_tst1.c.tmavg smvm_data/smvm_tst2.c.tmavg smvm_data/smvm_tst3.c.tmavg smvm_data/smvm_tst4.c.tmavg smvm_data/smvm_tst5.c.tmavg
-	@echo "OpenCL 1-5 (density)"
-	@cat smvm_data/smvm_tst1.opencl.tmavg smvm_data/smvm_tst2.opencl.tmavg smvm_data/smvm_tst3.opencl.tmavg smvm_data/smvm_tst4.opencl.tmavg smvm_data/smvm_tst5.opencl.tmavg
+	@echo "Density (%)  & Futhark C (ms)   & Futhark OpenCL (ms) \\\\\\"
+	@echo "1            & `cat smvm_data/smvm_tst1.c.tmavg`         &  `cat smvm_data/smvm_tst1.opencl.tmavg` \\\\\\"
+	@echo "2            & `cat smvm_data/smvm_tst2.c.tmavg`         &  `cat smvm_data/smvm_tst2.opencl.tmavg` \\\\\\"
+	@echo "3            & `cat smvm_data/smvm_tst3.c.tmavg`         &  `cat smvm_data/smvm_tst3.opencl.tmavg` \\\\\\"
+	@echo "4            & `cat smvm_data/smvm_tst4.c.tmavg`         &  `cat smvm_data/smvm_tst4.opencl.tmavg` \\\\\\"
+	@echo "5            & `cat smvm_data/smvm_tst5.c.tmavg`         &  `cat smvm_data/smvm_tst5.opencl.tmavg` \\\\\\"
+	@echo "10           & `cat smvm_data/smvm_tst10.c.tmavg`        &  `cat smvm_data/smvm_tst10.opencl.tmavg` \\\\\\"
+	@echo "15           & `cat smvm_data/smvm_tst15.c.tmavg`        &  `cat smvm_data/smvm_tst15.opencl.tmavg` \\\\\\"
+	@echo "20           & `cat smvm_data/smvm_tst20.c.tmavg`        &  `cat smvm_data/smvm_tst20.opencl.tmavg` \\\\\\"
+	@echo "Dense        & `cat smvm_data/smvm_dense.c.tmavg`        &  `cat smvm_data/smvm_dense.opencl.tmavg` "
 
-smvm_data/smvm_tst%.tmavg: smvm_data/smvm_tst%.out Makefile
-	cat smvm_data/smvm_tst$*.tm | awk 'ttt += $$1  {print ttt/NR/1000}' | tail -1 > $@
+smvm_data/smvm_%.tmavg: smvm_data/smvm_%.out Makefile
+	cat smvm_data/smvm_$*.tm | awk 'ttt += $$1  {print ttt/NR/1000}' | tail -1 > $@
 
 smvm_data/smvm_tst%.in: smvm.c.exe smvm_data
-	echo 21 $(ROWS) $* | ./$< -e gen_square_csr_and_vector > $@
+	echo 21 $(ROWS) $* | ./$< -e gen_square_csr_and_vector -b > $@
 
-smvm_data/smvm_tst%.c.out: smvm_data/smvm_tst%.in smvm.c.exe
-	cat $< | ./smvm.c.exe -r 10 -t smvm_data/smvm_tst$*.c.tm -e test_smvm > $@
+smvm_data/smvm_dense.in: smvm.c.exe smvm_data
+	echo 21 $(ROWS) | ./$< -e gen_dense -b > $@
 
-smvm_data/smvm_tst%.opencl.out: smvm_data/smvm_tst%.in smvm.opencl.exe
-	cat $< | ./smvm.opencl.exe -d AMD -r 10 -t smvm_data/smvm_tst$*.opencl.tm -e test_smvm > $@
+smvm_data/smvm_tst%.c.out: smvm.c.exe
+	cat smvm_data/smvm_tst$*.in | ./smvm.c.exe -r 10 -t smvm_data/smvm_tst$*.c.tm -e test_smvm > $@
+
+smvm_data/smvm_tst%.opencl.out: smvm.opencl.exe
+	cat smvm_data/smvm_tst$*.in | ./smvm.opencl.exe -d AMD -r 10 -t smvm_data/smvm_tst$*.opencl.tm -e test_smvm > $@
+
+smvm_data/smvm_dense.c.out: smvm.c.exe
+	cat smvm_data/smvm_dense.in | ./smvm.c.exe -r 10 -t smvm_data/smvm_dense.c.tm -e test_dense > $@
+
+smvm_data/smvm_dense.opencl.out: smvm.opencl.exe
+	cat smvm_data/smvm_dense.in | ./smvm.opencl.exe -d AMD -r 10 -t smvm_data/smvm_dense.opencl.tm -e test_dense > $@
 
 smvm_data: smvm.c.exe
 	mkdir -p smvm_data
