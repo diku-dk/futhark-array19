@@ -93,13 +93,13 @@ smvm_data/smvm_tst%.c.out: smvm.c.exe
 	cat smvm_data/smvm_tst$*.in | ./smvm.c.exe -r 10 -t smvm_data/smvm_tst$*.c.tm -e test_smvm > $@
 
 smvm_data/smvm_tst%.opencl.out: smvm.opencl.exe
-	cat smvm_data/smvm_tst$*.in | ./smvm.opencl.exe -d AMD -r 10 -t smvm_data/smvm_tst$*.opencl.tm -e test_smvm > $@
+	cat smvm_data/smvm_tst$*.in | ./smvm.opencl.exe -d $(DEV) -r 10 -t smvm_data/smvm_tst$*.opencl.tm -e test_smvm > $@
 
 smvm_data/smvm_dense.c.out: smvm.c.exe
 	cat smvm_data/smvm_dense.in | ./smvm.c.exe -r 10 -t smvm_data/smvm_dense.c.tm -e test_dense > $@
 
 smvm_data/smvm_dense.opencl.out: smvm.opencl.exe
-	cat smvm_data/smvm_dense.in | ./smvm.opencl.exe -d AMD -r 10 -t smvm_data/smvm_dense.opencl.tm -e test_dense > $@
+	cat smvm_data/smvm_dense.in | ./smvm.opencl.exe -d $(DEV) -r 10 -t smvm_data/smvm_dense.opencl.tm -e test_dense > $@
 
 smvm_data: smvm.c.exe
 	mkdir -p smvm_data
