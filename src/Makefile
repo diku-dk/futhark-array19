@@ -12,11 +12,14 @@ all: smvm.c.exe primes.c.exe primes0.c.exe primes_count.c.exe primes_count0.c.ex
 .PHONY: run
 run: primes.c.out primes0.c.out \
      primes.opencl.out primes0.opencl.out \
-     primes_count.opencl.out primes_count0.opencl.out
-	@echo "Times (us) for primes count (expanded) for n=$(shell cat primes_count.in):"
-	@cat ./primes_count.opencl.t
-	@echo "Times (us) for primes count (non-expanded) for n=$(shell cat primes_count0.in):"
-	@cat ./primes_count0.opencl.t
+     primes_count.opencl.out primes_count0.opencl.out \
+     primes.plainc.out
+	@echo "Time (ms) for primes count (expanded; average over 10 runs; count=$(shell cat primes_count.opencl.out)) for n=$(shell cat primes_count.in):"
+	@cat ./primes_count.opencl.t | awk 'ttt += $$1  {print ttt/NR/1000}' | tail -1
+	@echo "Time (ms) for primes count (non-expanded; average over 10 runs; count=$(shell cat primes_count0.opencl.out)) for n=$(shell cat primes_count0.in):"
+	@cat ./primes_count0.opencl.t | awk 'ttt += $$1  {print ttt/NR/1000}' | tail -1
+	@echo "Time (s) for primes count (plain c; count=$(shell cat primes.plainc.out)) for n=$(shell cat primes.in):"
+	@cat ./primes.plainc.t
 
 # Execution rules
 %.opencl.out: %.opencl.exe %.in
