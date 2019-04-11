@@ -6,8 +6,8 @@ type csr 't = {row_off: []i32, col_idx: []i32, vals: []t}
 -- irregular number of multiplications, followed by a segmented
 -- reduction with + and 0.
 
-let smvm ({row_off,col_idx,vals} : csr f32)
-         (v:[]f32) : []f32 = unsafe
+let smvm_wrong ({row_off,col_idx,vals} : csr f32)
+               (v:[]f32) : []f32 = unsafe
   let rows = map (\i -> (i,
                         row_off[i],
                         row_off[i+1]-row_off[i]))
@@ -16,22 +16,42 @@ let smvm ({row_off,col_idx,vals} : csr f32)
   let get r i = vals[r.2+i] * v[col_idx[r.2+i]]
   in expand_reduce sz get (+) 0f32 rows
 
+let smvm ({row_off,col_idx,vals} : csr f32)
+         (v:[]f32) : []f32 = unsafe
+  let rows = map (\i -> (i,
+                         row_off[i],
+                         row_off[i+1]-row_off[i]))
+                 (iota(length row_off - 1))
+  let sz r = r.3 + 1
+  let get r i = if i==0i32 then 0f32
+		else vals[r.2+i-1] * v[col_idx[r.2+i-1]]
+  in expand_reduce sz get (+) 0f32 rows
+
 -- let m : [](i32,i32,i32) =
 --   [(0,0,1),(0,1,2),(0,3,11),
---    (1,1,3),(1,2,4),
---    (2,1,5),(2,2,6),(2,3,7),
---    (3,3,8),
---    (4,3,9),(4,4,10)]
+--    (2,1,3),(2,2,4),
+--    (3,1,5),(3,2,6),(3,3,7),
+--    (4,3,8),
+--    (5,3,9),(5,4,10)]
 
-let m_csr : csr f32 =
-  {row_off=[0,3,5,8,9,11],          -- size 6
-   col_idx=[0,1,3,1,2,1,2,3,3,3,4], -- size 11
-   vals=map f32.i32 [1,2,11,3,4,5,6,7,8,9,10]}  -- size 11
+let mvm [n][m] (M:[n][m]f32) (V:[m]f32) : [n]f32 =
+  map (\R -> reduce (+) 0f32 (map2 (*) R V)) M
 
-let v : []f32 = map f32.i32 [3,1,2,6,5]
-
-let main (_ : i32) : []i32 =   -- [71,11,59,48,104]
-  map (i32.f32) <| smvm m_csr (copy v)
+let main (_ : i32) : ([]i32,[]i32) =              -- [71,0,11,59,48,104]
+  let m_csr : csr f32 =
+    {row_off=[0,3,3,5,8,9,11],                    -- size 7
+     col_idx=[0,1,3,1,2,1,2,3,3,3,4],             -- size 11
+     vals=map f32.i32 [1,2,11,3,4,5,6,7,8,9,10]}  -- size 11
+  let m : [6][5]f32 =
+    map (map f32.i32) [[1,2,0,11,0],
+                       [0,0,0,0,0],
+                       [0,3,4,0,0],
+                       [0,5,6,7,0],
+                       [0,0,0,8,0],
+                       [0,0,0,9,10]]
+  let v : []f32 = map f32.i32 [3,1,2,6,5]
+  in (map i32.f32 <| smvm m_csr v,
+      map i32.f32 <| mvm m v)
 
 import "lib/github.com/diku-dk/cpprandom/random"
 import "lib/github.com/diku-dk/sorts/merge_sort"
@@ -77,14 +97,6 @@ entry test_smvm (row_off:[]i32) (col_idx:[]i32) (vals:[]f32) (v:[]f32) : f32 =
    let csr = {row_off,col_idx,vals}
    let res = smvm csr v
    in reduce (+) 0f32 res
-
-let dotprod xs ys = map2 (*) xs ys |> f32.sum
-
-let matmul [n][m][k] (xss: [n][m]f32) (yss: [m][k]f32) =
-  map (\xs -> map (dotprod xs) (transpose yss)) xss
-
-let mvm [n][m] (xss: [n][m]f32) (v: [m]f32) : [n]f32 =
-  map (\xs -> dotprod xs v) xss
 
 entry test_dense [n] (m: [][n]f32) (v: [n]f32) : f32 =
   reduce (+) 0f32 (mvm m v)

@@ -71,3 +71,15 @@ let expand_reduce 'a 'b [n]
                   (arr:[n]a) : *[n]b =
   let (vals, flags) = expand_with_flags sz get arr
   in segm_reduce f ne flags vals
+
+
+let expand_reduce_keep 'a 'b [n]
+                       (sz: a -> i32) (get: a -> i32 -> b)
+                       (f: b -> b -> b) (ne:b)
+                       (as:[n]a) : *[n]b =
+  let ias = zip (iota n) as
+  let (is, bs) = unzip <| expand (sz <-< (.2))
+                                 (\(i,a) j -> (i,get a j))
+                                 ias
+  let dst = replicate n ne
+  in reduce_by_index dst f ne is bs
