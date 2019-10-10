@@ -1,8 +1,8 @@
 import "lib/github.com/diku-dk/cpprandom/random"
 import "types"
 
-module rng = xorshift128plus
-module dist = uniform_real_distribution f32 rng
+module rnge = xorshift128plus
+module dist = uniform_real_distribution f32 rnge
 
 type hsv = (f32, f32, f32)
 
@@ -78,15 +78,15 @@ let generate_terrain
         ) (0..<depth)
 
   -- Make random spikes.
-  let rngs = rng.rng_from_seed [seed]
-             |> rng.split_rng (depth * width)
+  let rngs = rnge.rng_from_seed [seed]
+             |> rnge.split_rng (depth * width)
              |> unflatten depth width
   let (rngs, points') =
     map2 (map2 (\rng p ->
                   let (rng, y') = dist.rand (-fluct / 2, fluct / 2) rng
                   in (rng, p with y = y')
                )) rngs points |> map unzip |> unzip
-  let rng = rng.join_rng (flatten rngs)
+  let rng = rnge.join_rng (flatten rngs)
 
   -- Smooth areas with a stencil.
   let points'' =
@@ -122,7 +122,7 @@ let generate_terrain
 
   let n_triangles = (depth - 1, 2 * (width - 1))
   let rngs = rng
-             |> rng.split_rng (n_triangles.1 * n_triangles.2)
+             |> rnge.split_rng (n_triangles.1 * n_triangles.2)
              |> unflatten n_triangles.1 n_triangles.2
   let triangles_coloured =
     map2 (map2 (\rng t ->
