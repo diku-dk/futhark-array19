@@ -7,17 +7,17 @@ type keys_state = {shift: bool, down: bool, up: bool, left: bool, right: bool,
 
 type text_content = (i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
 module lys: lys with text_content = text_content = {
-  type state = {h: i32, w: i32,
-                view_dist: f32, -- another way of expressing the FOV
-                draw_dist: f32,
-                camera: camera,
-                triangles_coloured: [](triangle_coloured argb.colour),
-                triangles_in_view: [](triangle_projected, argb.colour),
-                keys: keys_state}
+  type~ state = {h: i32, w: i32,
+                 view_dist: f32, -- another way of expressing the FOV
+                 draw_dist: f32,
+                 camera: camera,
+                 triangles_coloured: [](triangle_coloured argb.colour),
+                 triangles_in_view: [](triangle_projected, argb.colour),
+                 keys: keys_state}
 
   type text_content = text_content
 
-  let text_format = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f"
+  let text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f"
 
   let text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
@@ -27,13 +27,13 @@ module lys: lys with text_content = text_content = {
 
   let text_colour = const argb.blue
 
-  let init terrain_seed (h: i32) (w: i32): state =
+  let init (terrain_seed: u32) (h: i32) (w: i32): state =
     let view_dist = 600
     let draw_dist = 100000
     let camera = {position={x=150000, y= -4000, z=100000},
                   orientation={x=0, y=0, z=0}}
 
-    let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 terrain_seed
+    let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 (i32.u32 terrain_seed)
     let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
                                                    camera triangles_coloured
     in {w, h,
@@ -117,14 +117,14 @@ module lys: lys with text_content = text_content = {
     then keys with plus = pressed
     else keys
 
-  let key (e: key_event) k (s: state) =
-    let pressed = match e
-                  case #keydown -> true
-                  case #keyup -> false
-    in s with keys = keychange k pressed s.keys
+  let event (e: event) (s: state) =
+    match e
+    case #step td -> step td s
+    case #wheel _ -> s
+    case #mouse _ -> s
+    case #keydown {key} -> s with keys = keychange key true s.keys
+    case #keyup {key} -> s with keys = keychange key false s.keys
 
-  let mouse _ _ _ s = s
-  let wheel _ _ s = s
   let grab_mouse = false
 }
 

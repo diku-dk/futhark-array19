@@ -82,7 +82,7 @@ let generate_terrain
              |> rnge.split_rng (depth * width)
              |> unflatten depth width
   let (rngs, points') =
-    map2 (map2 (\rng p ->
+    map2 (map2 (\rng (p: vec3.vector) ->
                   let (rng, y') = dist.rand (-fluct / 2, fluct / 2) rng
                   in (rng, p with y = y')
                )) rngs points |> map unzip |> unzip
@@ -93,7 +93,7 @@ let generate_terrain
     iterate smooth_iterations_areas (\ps ->
       tabulate_2d depth width
                   (\i j ->
-                     let p = ps[i,j]
+                     let p: vec3.vector = ps[i,j]
                      in if i >= 1 && i < depth - 1 && j >= 1 && j < width - 1
                         then p with y = unsafe (
                           ps[i-1,j-1].y + ps[i-1,j].y + ps[i-1,j+1].y +
@@ -104,26 +104,28 @@ let generate_terrain
 
   -- Make triangles.
   let triangles =
-    map3 (\row0 row1 i ->
-            let (row0', row1') = if i % 2 == 0
-                                 then (row0, row1)
-                                 else (row1, row0)
-            in map4 (\c0 c0t c1 c1t ->
-                       let tri0 = (c0, c0t, c1)
-                       let tri1 = (c1, c1t, c0t)
-                       in [tri0, tri1]
-                    ) row0'[:width-1] row0'[1:] row1'[:width-1] row1'[1:]
-               |> flatten
-         ) points''[:depth-1] points''[1:] (0..<depth-1)
+    let m = depth - 1
+    let n = width - 1
+    let n2 = n * 2
+    in map3 (\row0 row1 i ->
+               let (row0', row1') = if i % 2 == 0
+                                    then (row0, row1)
+                                    else (row1, row0)
+               in flatten (map4 (\c0 c0t c1 c1t ->
+                                   let tri0 = (c0, c0t, c1)
+                                   let tri1 = (c1, c1t, c0t)
+                                   in [tri0, tri1]
+                                ) (row0'[:width-1] :> [n]vec3.vector) (row0'[1:] :> [n]vec3.vector) (row1'[:width-1] :> [n]vec3.vector) (row1'[1:] :> [n]vec3.vector)) :> [n2]triangle) (points''[:depth-1] :> [m][width]vec3.vector) (points''[1:] :> [m][width]vec3.vector) ((0..<depth-1) :> [m]i32)
 
   -- Colour triangles.
   let max_y = reduce f32.max (-fluct) (flatten triangles |> map (.0.y))
   let min_y = reduce f32.min fluct (flatten triangles |> map (.0.y))
 
-  let n_triangles = (depth - 1, 2 * (width - 1))
+  let (n_triangles0, n_triangles1) = (depth - 1, 2 * (width - 1))
+  let triangles = triangles :> [n_triangles0][n_triangles1]triangle
   let rngs = rng
-             |> rnge.split_rng (n_triangles.0 * n_triangles.1)
-             |> unflatten n_triangles.0 n_triangles.1
+             |> rnge.split_rng (n_triangles0 * n_triangles1)
+             |> unflatten n_triangles0 n_triangles1
   let triangles_coloured =
     map2 (map2 (\rng t ->
                   let h = 360.0 * ((t.0.y - min_y) / (max_y - min_y))
@@ -135,11 +137,11 @@ let generate_terrain
 
   -- Smooth the colours.
   let triangles_coloured' =
-    iterate smooth_iterations_colours (\tc ->
-      tabulate_2d n_triangles.0 n_triangles.1
+    iterate smooth_iterations_colours (\(tc: [n_triangles0][n_triangles1]triangle_coloured hsv) ->
+      tabulate_2d n_triangles0 n_triangles1
                   (\i j ->
                      let t = tc[i,j]
-                     in if i >= 1 && i < n_triangles.0 - 1 && j >= 1 && j < n_triangles.1 - 1
+                     in if i >= 1 && i < n_triangles0 - 1 && j >= 1 && j < n_triangles1 - 1
                         then t with colour = unsafe (mix8
                           tc[i-1,j-1].colour tc[i-1,j].colour tc[i-1,j+1].colour
                           tc[i,  j-1].colour                  tc[i,  j+1].colour
