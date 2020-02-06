@@ -117,16 +117,16 @@ let generate_terrain
          ) points''[:depth-1] points''[1:] (0..<depth-1)
 
   -- Colour triangles.
-  let max_y = reduce f32.max (-fluct) (flatten triangles |> map (.1.y))
-  let min_y = reduce f32.min fluct (flatten triangles |> map (.1.y))
+  let max_y = reduce f32.max (-fluct) (flatten triangles |> map (.0.y))
+  let min_y = reduce f32.min fluct (flatten triangles |> map (.0.y))
 
   let n_triangles = (depth - 1, 2 * (width - 1))
   let rngs = rng
-             |> rnge.split_rng (n_triangles.1 * n_triangles.2)
-             |> unflatten n_triangles.1 n_triangles.2
+             |> rnge.split_rng (n_triangles.0 * n_triangles.1)
+             |> unflatten n_triangles.0 n_triangles.1
   let triangles_coloured =
     map2 (map2 (\rng t ->
-                  let h = 360.0 * ((t.1.y - min_y) / (max_y - min_y))
+                  let h = 360.0 * ((t.0.y - min_y) / (max_y - min_y))
                   let (rng, h') = dist.rand (h - 30.0, h + 30.0) rng
                   let (rng, s) = dist.rand (0.5, 1.0) rng
                   let (_rng, v) = dist.rand (0.5, 1.0) rng
@@ -136,10 +136,10 @@ let generate_terrain
   -- Smooth the colours.
   let triangles_coloured' =
     iterate smooth_iterations_colours (\tc ->
-      tabulate_2d n_triangles.1 n_triangles.2
+      tabulate_2d n_triangles.0 n_triangles.1
                   (\i j ->
                      let t = tc[i,j]
-                     in if i >= 1 && i < n_triangles.1 - 1 && j >= 1 && j < n_triangles.2 - 1
+                     in if i >= 1 && i < n_triangles.0 - 1 && j >= 1 && j < n_triangles.1 - 1
                         then t with colour = unsafe (mix8
                           tc[i-1,j-1].colour tc[i-1,j].colour tc[i-1,j+1].colour
                           tc[i,  j-1].colour                  tc[i,  j+1].colour

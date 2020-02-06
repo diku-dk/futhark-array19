@@ -150,13 +150,13 @@ let find_triangles_in_view
     (p0.y >= h && p1.y >= h && p2.y >= h)
 
   let close_enough (triangle: triangle_projected): bool =
-    (close_enough_dist triangle.1 ||
-     close_enough_dist triangle.2 ||
-     close_enough_dist triangle.3) &&
+    (close_enough_dist triangle.0 ||
+     close_enough_dist triangle.1 ||
+     close_enough_dist triangle.2) &&
     ! (close_enough_fully_out_of_frame triangle)
 
   let colours = map (.colour) triangles_coloured
-  in filter (close_enough <-< (.1)) (zip triangles_projected colours)
+  in filter (close_enough <-< (.0)) (zip triangles_projected colours)
 
 let render_triangles_in_view
     (h: i32)
