@@ -1,42 +1,37 @@
-# futhark-array19
-Experimental repository for ARRAY '19 submission.
+# raster3d
 
-Build
------
+Short example of 3D rasterizing a scene.  
 
-To build the non-gui executables, do the following:
-````
-$ cd src
-$ make
-````
+Requires [Futhark](http://futhark-lang.org) and SDL2 and SDL2-ttf
+libraries with associated header files.
 
-The various executables can be executed and timed with `make run`.
+Uses the `expand` function from the https://github.com/diku-dk/segmented
+package to draw the triangles and `reduce_by_index` to simulate a
+z-buffer.  The interesting code lies in `raster3d.fut` in the
+`render_projected_triangles` function.
 
-Lines
------
+There is room for improvement!
 
-To run the lines and linez examples, which features the flattened
-version of line drawing and triangle drawing, do as follows:
-````
-$ cd src/lines
-$ make runz
-````
 
-(and select the graphics card you want to use).
+## Demo
 
-Primes
-------
+Run `futhark pkg sync` once and then `make && ./demo` for an interactive
+terrain explorer.  Requires SDL2 and SDL2-ttf C libraries with
+associated header files.
 
-The sequential plain-c version (`src/primes.c`) is currently faster on
-my MacBook Pro 2015 (AMD GPU):
+Controls:
 
-````
-$ echo 100000000 | time ./primes_count.opencl.exe -d AMD
-5761455i32
-        3.03 real         0.02 user         0.81 sys
-$ echo 100000000 | time ./primes.plainc.exe
-5761455
-        1.92 real         1.82 user         0.09 sys
-````
+  + Up/Down: Move forwards/backwards
+  + Left/Right: Turn left/right
+  + PageUp/PageDown: Move upwards/downwards
+  + Shift: Move and turn faster
+  + Plus/Minus: Increase/decrease draw distance
+  + F1: Toggle text
+  + ESC: Exit
 
-Similar results are obtained with the `-t` option.
+
+## Notes
+
+This demo was originally part of the
+https://github.com/diku-dk/futhark-array19 submission, but has been
+reworked to work with newer Futhark.
