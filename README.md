@@ -1,5 +1,7 @@
 # raster3d
 
+![Screenshot](screenshot.png)
+
 Short example of 3D rasterizing a scene.
 
 Requires [Futhark](http://futhark-lang.org) and SDL2 and SDL2-ttf
