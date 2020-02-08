@@ -1,6 +1,6 @@
 # raster3d
 
-Short example of 3D rasterizing a scene.  
+Short example of 3D rasterizing a scene.
 
 Requires [Futhark](http://futhark-lang.org) and SDL2 and SDL2-ttf
 libraries with associated header files.
