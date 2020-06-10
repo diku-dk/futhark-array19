@@ -95,7 +95,7 @@ let generate_terrain
                   (\i j ->
                      let p: vec3.vector = ps[i,j]
                      in if i >= 1 && i < depth - 1 && j >= 1 && j < width - 1
-                        then p with y = unsafe (
+                        then p with y = (
                           ps[i-1,j-1].y + ps[i-1,j].y + ps[i-1,j+1].y +
                           ps[i,  j-1].y +               ps[i,  j+1].y +
                           ps[i+1,j-1].y + ps[i+1,j].y + ps[i+1,j+1].y) / 8
@@ -142,7 +142,7 @@ let generate_terrain
                   (\i j ->
                      let t = tc[i,j]
                      in if i >= 1 && i < n_triangles0 - 1 && j >= 1 && j < n_triangles1 - 1
-                        then t with colour = unsafe (mix8
+                        then t with colour = (mix8
                           tc[i-1,j-1].colour tc[i-1,j].colour tc[i-1,j+1].colour
                           tc[i,  j-1].colour                  tc[i,  j+1].colour
                           tc[i+1,j-1].colour tc[i+1,j].colour tc[i+1,j+1].colour)

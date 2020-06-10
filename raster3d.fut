@@ -109,7 +109,7 @@ let render_projected_triangles [n]
     else let (pa, pb) = ({y=loca / w, x=loca % w}, {y=locb / w, x=locb % w})
          -- We really should get rid of this and just calculate the z values
          -- when doing scanline rasterization.
-         let (ta, tb) = unsafe (triangles_projected[ia], triangles_projected[ib])
+         let (ta, tb) = (triangles_projected[ia], triangles_projected[ib])
          let (bary_a, bary_b) = (barycentric_coordinates pa ta,
                                  barycentric_coordinates pb tb)
          let (z_a, z_b) = (interpolate_z ta bary_a, interpolate_z tb bary_b)
@@ -120,7 +120,7 @@ let render_projected_triangles [n]
   let pixel_color (_loc, i): argb.colour =
     if i == -1
     then argb.white
-    else unsafe colours[i]
+    else colours[i]
 
   let pixels = replicate (h * w) empty
   let pixels' = reduce_by_index pixels update empty indices points''
