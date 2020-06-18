@@ -107,8 +107,8 @@ let render_projected_triangles [n]
     else if ib == -1
     then (loca, ia)
     else let (pa, pb) = ({y=loca / w, x=loca % w}, {y=locb / w, x=locb % w})
-         -- We really should get rid of this and just calculate the z values
-         -- when doing scanline rasterization.
+         -- XXX: We really should get rid of this and just calculate the z
+         -- values when doing scanline rasterization.
          let (ta, tb) = (triangles_projected[ia], triangles_projected[ib])
          let (bary_a, bary_b) = (barycentric_coordinates pa ta,
                                  barycentric_coordinates pb tb)
