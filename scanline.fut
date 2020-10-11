@@ -19,8 +19,8 @@ let normalize ((p, q, r): triangle_projected): triangle_projected =
   let (p, q) = bubble p q
   in (p, q, r)
 
-let lines_in_triangle 'a (((p, _, r), _): (triangle_projected, a)): i32 =
-  r.y - p.y + 1
+let lines_in_triangle 'a (((p, _, r), _): (triangle_projected, a)): i64 =
+  i64.i32 (r.y - p.y + 1)
 
 let dxdy (a: point_projected) (b: point_projected): f32 =
   let dx = b.x - a.x
@@ -30,7 +30,8 @@ let dxdy (a: point_projected) (b: point_projected): f32 =
 
 let get_line_in_triangle 'a
     (((p, q, r), aux): (triangle_projected, a))
-    (i: i32): (line, a) =
+    (i: i64): (line, a) =
+  let i = i32.i64 i
   let y = p.y + i
   in if i <= q.y - p.y then     -- upper half
      let sl1 = dxdy p q
@@ -62,10 +63,11 @@ let slo ({x=x1, y=y1}: point_2d) ({x=x2, y=y2}: point_2d): f32 =
   if x2 == x1 then if y2 > y1 then r32 1 else r32 (-1)
   else r32 (y2 - y1) / r32 (i32.abs (x2 - x1))
 
-let points_in_line 'a ((({x=x1, y=y1}, {x=x2, y=y2}), _): (line, a)): i32 =
-  i32.(1 + max (abs (x2 - x1)) (abs (y2 - y1)))
+let points_in_line 'a ((({x=x1, y=y1}, {x=x2, y=y2}), _): (line, a)): i64 =
+  i64.i32 (i32.(1 + max (abs (x2 - x1)) (abs (y2 - y1))))
 
-let get_point_in_line 'a (((p1, p2), aux): (line, a)) (i: i32): (point_2d, a) =
+let get_point_in_line 'a (((p1, p2), aux): (line, a)) (i: i64): (point_2d, a) =
+  let i = i32.i64 i in
   if i32.abs (p1.x - p2.x) > i32.abs (p1.y - p2.y)
   then let dir = compare p1.x p2.x
        let sl = slo p1 p2

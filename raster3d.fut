@@ -43,7 +43,7 @@ let normalize_triangle
       normalize_point p2)
 
 let project_triangle
-    (h: i32) (w: i32)
+    (h: i64) (w: i64)
     (view_dist: f32)
     (triangle: triangle): triangle_projected =
 
@@ -51,8 +51,8 @@ let project_triangle
     let z_ratio = if z >= 0.0
                   then (view_dist + z) / view_dist
                   else 1.0 / ((view_dist - z) / view_dist)
-    let x_projected = x / z_ratio + r32 w / 2.0
-    let y_projected = y / z_ratio + r32 h / 2.0
+    let x_projected = x / z_ratio + f32.i64 w / 2.0
+    let y_projected = y / z_ratio + f32.i64 h / 2.0
     in {x=t32 x_projected, y=t32 y_projected}
 
   let ({x=x0, y=y0, z=z0}, {x=x1, y=y1, z=z1}, {x=x2, y=y2, z=z2}) = triangle
@@ -88,17 +88,17 @@ let interpolate_z
 
 -- | Render triangles using expand and reduce_by_index.
 let render_projected_triangles [n]
-    (h: i32)
-    (w: i32)
+    (h: i64)
+    (w: i64)
     (triangles_projected: [n]triangle_projected)
     (colours: [n]argb.colour): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
   let aux = 0..<n
   let lines = lines_of_triangles triangles_projected aux
   let points = points_of_lines lines
-  let points' = filter (\({x, y}, _) -> x >= 0 && x < w && y >=0 && y < h) points
-  let indices = map (\({x, y}, _) -> y * w + x) points'
-  let points'' = map (\({x, y}, aux) -> (y * w + x, aux)) points'
+  let points' = filter (\({x, y}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
+  let indices = map (\({x, y}, _) -> i64.i32 y * w + i64.i32 x) points'
+  let points'' = map (\({x, y}, aux) -> (y * i32.i64 w + x, aux)) points'
   let empty = (-1, -1)
 
   let update (loca, ia) (locb, ib) =
@@ -106,7 +106,8 @@ let render_projected_triangles [n]
     then (locb, ib)
     else if ib == -1
     then (loca, ia)
-    else let (pa, pb) = ({y=loca / w, x=loca % w}, {y=locb / w, x=locb % w})
+    else let w = i32.i64 w
+         let (pa, pb) = ({y=loca / w, x=loca % w}, {y=locb / w, x=locb % w})
          -- XXX: We really should get rid of this and just calculate the z
          -- values when doing scanline rasterization.
          let (ta, tb) = (triangles_projected[ia], triangles_projected[ib])
@@ -128,8 +129,8 @@ let render_projected_triangles [n]
   in unflatten h w pixels''
 
 let find_triangles_in_view
-    (h: i32)
-    (w: i32)
+    (h: i64)
+    (w: i64)
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
@@ -145,9 +146,9 @@ let find_triangles_in_view
   let close_enough_fully_out_of_frame
       ((p0, p1, p2): triangle_projected): bool =
     (p0.x < 0 && p1.x < 0 && p2.x < 0) ||
-    (p0.x >= w && p1.x >= w && p2.x >= w) ||
+    (p0.x >= i32.i64 w && p1.x >= i32.i64 w && p2.x >= i32.i64 w) ||
     (p0.y < 0 && p1.y < 0 && p2.y < 0) ||
-    (p0.y >= h && p1.y >= h && p2.y >= h)
+    (p0.y >= i32.i64 h && p1.y >= i32.i64 h && p2.y >= i32.i64 h)
 
   let close_enough (triangle: triangle_projected): bool =
     (close_enough_dist triangle.0 ||
@@ -159,15 +160,15 @@ let find_triangles_in_view
   in filter (close_enough <-< (.0)) (zip triangles_projected colours)
 
 let render_triangles_in_view
-    (h: i32)
-    (w: i32)
+    (h: i64)
+    (w: i64)
     (triangles_in_view: [](triangle_projected, argb.colour)) =
   let (triangles_projected, colours) = unzip triangles_in_view
   in render_projected_triangles h w triangles_projected colours
 
 let render_triangles_in_view'
-    (h: i32)
-    (w: i32)
+    (h: i64)
+    (w: i64)
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)

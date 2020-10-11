@@ -57,23 +57,23 @@ let mix8 (a: hsv) (b: hsv) (c: hsv) (d: hsv) (e: hsv) (f: hsv) (g: hsv) (h: hsv)
 
 -- | A very simple terrain generator.
 let generate_terrain
-  (depth: i32)
-  (width: i32)
-  (size: i32)
+  (depth: i64)
+  (width: i64)
+  (size: i64)
   (fluct: f32)
   (smooth_iterations_areas: i32)
   (smooth_iterations_colours: i32)
   (seed: i32): [](triangle_coloured argb.colour) =
 
   -- Generate points.
-  let size_vert = r32 size / 2 ** 0.5
+  let size_vert = f32.i64 size / 2 ** 0.5
   let points =
-    map (\i ->
+    map (\(i: i64) ->
            let indent = (i % 2) * (size / 2)
-           in map (\j ->
-                     {x=r32 (j * size + indent),
+           in map (\(j: i64) ->
+                     {x=f32.i64 (j * size + indent),
                       y=0,
-                      z=r32 i * size_vert}
+                      z=f32.i64 i * size_vert}
                   ) (0..<width)
         ) (0..<depth)
 
@@ -115,7 +115,7 @@ let generate_terrain
                                    let tri0 = (c0, c0t, c1)
                                    let tri1 = (c1, c1t, c0t)
                                    in [tri0, tri1]
-                                ) (row0'[:width-1] :> [n]vec3.vector) (row0'[1:] :> [n]vec3.vector) (row1'[:width-1] :> [n]vec3.vector) (row1'[1:] :> [n]vec3.vector)) :> [n2]triangle) (points''[:depth-1] :> [m][width]vec3.vector) (points''[1:] :> [m][width]vec3.vector) ((0..<depth-1) :> [m]i32)
+                                ) (row0'[:width-1] :> [n]vec3.vector) (row0'[1:] :> [n]vec3.vector) (row1'[:width-1] :> [n]vec3.vector) (row1'[1:] :> [n]vec3.vector)) :> [n2]triangle) (points''[:depth-1] :> [m][width]vec3.vector) (points''[1:] :> [m][width]vec3.vector) ((0..<depth-1) :> [m]i64)
 
   -- Colour triangles.
   let max_y = reduce f32.max (-fluct) (flatten triangles |> map (.0.y))

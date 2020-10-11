@@ -5,9 +5,9 @@ import "terrain"
 type keys_state = {shift: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, minus: bool, plus: bool}
 
-type text_content = (i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
+type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32)
 module lys: lys with text_content = text_content = {
-  type~ state = {h: i32, w: i32,
+  type~ state = {h: i64, w: i64,
                  view_dist: f32, -- another way of expressing the FOV
                  draw_dist: f32,
                  camera: camera,
@@ -27,7 +27,7 @@ module lys: lys with text_content = text_content = {
 
   let text_colour = const argb.blue
 
-  let init (terrain_seed: u32) (h: i32) (w: i32): state =
+  let init (terrain_seed: u32) (h: i64) (w: i64): state =
     let view_dist = 600
     let draw_dist = 100000
     let camera = {position={x=150000, y= -4000, z=100000},
@@ -87,7 +87,7 @@ module lys: lys with text_content = text_content = {
                                  s.camera s.triangles_coloured
 
 
-  let resize (h: i32) (w: i32) (s: state) =
+  let resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
 
   let keychange k pressed (keys: keys_state): keys_state =
@@ -131,5 +131,5 @@ module lys: lys with text_content = text_content = {
 -- ==
 -- entry: benchmark
 -- compiled input { 800 600 }
-entry benchmark (w: i32) (h: i32) =
+entry benchmark (w: i64) (h: i64) =
   lys.init 0 h w |> lys.render
