@@ -1,3 +1,4 @@
+import "lib/github.com/athas/matte/colour"
 import "types"
 import "scanline"
 

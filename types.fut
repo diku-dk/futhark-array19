@@ -1,5 +1,4 @@
 import "lib/github.com/athas/vector/vspace"
-import "lib/github.com/athas/matte/colour"
 
 module vec3 = mk_vspace_3d f32
 
