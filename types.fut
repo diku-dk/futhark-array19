@@ -4,9 +4,9 @@ module vec3 = mk_vspace_3d f32
 
 type point_projected = {x: i32, y: i32, z: f32}
 type point_2d = {x: i32, y: i32}
-type point_barycentric = vec3.vector
+type point_2d_with_z = {x: i32, y: i32, z: f32}
 
-type line = (point_2d, point_2d)
+type line = {y: i32, x1: i32, x2: i32, z1: f32, z2: f32}
 
 type triangle = (vec3.vector, vec3.vector, vec3.vector)
 type triangle_coloured 'colour = {triangle: triangle, colour: colour}

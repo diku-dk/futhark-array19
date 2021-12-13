@@ -28,24 +28,38 @@ let dxdy (a: point_projected) (b: point_projected): f32 =
   in if dy == 0 then r32 0
      else r32 dx f32./ r32 dy
 
+let dzdy (a: point_projected) (b: point_projected): f32 =
+  let dz = b.z - a.z
+  let dy = b.y - a.y
+  in if dy == 0 then r32 0
+     else dz f32./ r32 dy
+
 let get_line_in_triangle 'a
     (((p, q, r), aux): (triangle_projected, a))
     (i: i64): (line, a) =
   let i = i32.i64 i
   let y = p.y + i
   in if i <= q.y - p.y then     -- upper half
-     let sl1 = dxdy p q
-     let sl2 = dxdy p r
-     let x1 = p.x + t32 (f32.round (sl1 * r32 i))
-     let x2 = p.x + t32 (f32.round (sl2 * r32 i))
-     in (({x=x1, y}, {x=x2, y}), aux)
+     let xsl1 = dxdy p q
+     let xsl2 = dxdy p r
+     let x1 = p.x + t32 (f32.round (xsl1 * r32 i))
+     let x2 = p.x + t32 (f32.round (xsl2 * r32 i))
+     let zsl1 = dzdy p q
+     let zsl2 = dzdy p r
+     let z1 = p.z + zsl1 * r32 i
+     let z2 = p.z + zsl2 * r32 i
+     in ({y, x1, x2, z1, z2}, aux)
      else                       -- lower half
-     let sl1 = dxdy r p
-     let sl2 = dxdy r q
+     let xsl1 = dxdy r p
+     let xsl2 = dxdy r q
      let dy = (r.y - p.y) - i
-     let x1 = r.x - t32 (f32.round (sl1 * r32 dy))
-     let x2 = r.x - t32 (f32.round (sl2 * r32 dy))
-     in (({x=x1, y}, {x=x2, y}), aux)
+     let x1 = r.x - t32 (f32.round (xsl1 * r32 dy))
+     let x2 = r.x - t32 (f32.round (xsl2 * r32 dy))
+     let zsl1 = dzdy r p
+     let zsl2 = dzdy r q
+     let z1 = r.z - zsl1 * r32 dy
+     let z2 = r.z - zsl2 * r32 dy
+     in ({y, x1, x2, z1, z2}, aux)
 
 let lines_of_triangles 'a [n]
     (triangles: [n]triangle_projected)
@@ -54,29 +68,14 @@ let lines_of_triangles 'a [n]
   in expand lines_in_triangle get_line_in_triangle
             (zip triangles' aux)
 
-let swap ({x, y}: point_2d): point_2d = {x=y, y=x}
+let points_in_line 'a (({y=_, x1, x2, z1=_, z2=_}, _): (line, a)): i64 =
+  i64.i32 (i32.(1 + abs (x2 - x1)))
 
-let compare (v1: i32) (v2: i32): i32 =
-  if v2 > v1 then 1 else if v1 > v2 then -1 else 0
+let get_point_in_line 'a (({y, x1, x2, z1, z2}, aux): (line, a)) (i: i64): (point_2d_with_z, a) =
+  ({x=x1 + i32.sgn (x2 - x1) * i32.i64 i,
+    y,
+    z=z1 + f32.sgn (z2 - z1) * f32.i64 i},
+   aux)
 
-let slo ({x=x1, y=y1}: point_2d) ({x=x2, y=y2}: point_2d): f32 =
-  if x2 == x1 then if y2 > y1 then r32 1 else r32 (-1)
-  else r32 (y2 - y1) / r32 (i32.abs (x2 - x1))
-
-let points_in_line 'a ((({x=x1, y=y1}, {x=x2, y=y2}), _): (line, a)): i64 =
-  i64.i32 (i32.(1 + max (abs (x2 - x1)) (abs (y2 - y1))))
-
-let get_point_in_line 'a (((p1, p2), aux): (line, a)) (i: i64): (point_2d, a) =
-  let i = i32.i64 i in
-  if i32.abs (p1.x - p2.x) > i32.abs (p1.y - p2.y)
-  then let dir = compare p1.x p2.x
-       let sl = slo p1 p2
-       in ({x=p1.x + dir * i,
-            y=p1.y + t32 (sl * r32 i)}, aux)
-  else let dir = compare (p1.y) (p2.y)
-       let sl = slo (swap p1) (swap p2)
-       in ({x=p1.x + t32 (sl * r32 i),
-            y=p1.y + i * dir}, aux)
-
-let points_of_lines 'a (lines: [](line, a)): [](point_2d, a) =
+let points_of_lines 'a (lines: [](line, a)): [](point_2d_with_z, a) =
   expand points_in_line get_point_in_line lines

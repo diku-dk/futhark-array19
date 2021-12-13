@@ -62,31 +62,6 @@ let project_triangle
   let {x=xp2, y=yp2} = project_point {x=x2, y=y2, z=z2}
   in ({x=xp0, y=yp0, z=z0}, {x=xp1, y=yp1, z=z1}, {x=xp2, y=yp2, z=z2})
 
--- | We use barycentric coordinates to interpolate the z values of all the
--- points inside a triangle.  We do not use this in any clever way, so it would
--- be much better to just find the z values during the run of the scan line
--- rasterizer.
-let barycentric_coordinates
-    ({x, y}: point_2d)
-    (triangle: triangle_projected): point_barycentric =
-  let ({x=xp0, y=yp0, z=_}, {x=xp1, y=yp1, z=_}, {x=xp2, y=yp2, z=_}) = triangle
-  let factor = (yp1 - yp2) * (xp0 - xp2) + (xp2 - xp1) * (yp0 - yp2)
-  in if factor != 0 -- Avoid division by zero.
-     then let a = ((yp1 - yp2) * (x - xp2) + (xp2 - xp1) * (y - yp2))
-          let b = ((yp2 - yp0) * (x - xp2) + (xp0 - xp2) * (y - yp2))
-          let factor' = r32 factor
-          let an = r32 a / factor'
-          let bn = r32 b / factor'
-          let cn = 1.0 - an - bn
-          in {x=an, y=bn, z=cn}
-     else {x= -1.0, y= -1.0, z= -1.0}
-
-let interpolate_z
-    (triangle: triangle_projected)
-    ({x=an, y=bn, z=cn}: point_barycentric): f32 =
-  let ({x=_, y=_, z=z0}, {x=_, y=_, z=z1}, {x=_, y=_, z=z2}) = triangle
-  in an * z0 + bn * z1 + cn * z2
-
 -- | Render triangles using expand and reduce_by_index.
 let render_projected_triangles [n]
     (h: i64)
@@ -97,29 +72,21 @@ let render_projected_triangles [n]
   let aux = 0..<n
   let lines = lines_of_triangles triangles_projected aux
   let points = points_of_lines lines
-  let points' = filter (\({x, y}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
-  let indices = map (\({x, y}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y}, aux) -> (y * i32.i64 w + x, aux)) points'
-  let empty = (-1, -1)
+  let points' = filter (\({x, y, z=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
+  let indices = map (\({x, y, z=_}, _) -> i64.i32 y * w + i64.i32 x) points'
+  let points'' = map (\({x, y, z}, aux) -> (y * i32.i64 w + x, z, aux)) points'
+  let empty = (-1, -f32.inf, -1)
 
-  let update (loca, ia) (locb, ib) =
+  let update (loca, z_a, ia) (locb, z_b, ib) =
     if ia == -1
-    then (locb, ib)
+    then (locb, z_b, ib)
     else if ib == -1
-    then (loca, ia)
-    else let w = i32.i64 w
-         let (pa, pb) = ({y=loca / w, x=loca % w}, {y=locb / w, x=locb % w})
-         -- XXX: We really should get rid of this and just calculate the z
-         -- values when doing scanline rasterization.
-         let (ta, tb) = (triangles_projected[ia], triangles_projected[ib])
-         let (bary_a, bary_b) = (barycentric_coordinates pa ta,
-                                 barycentric_coordinates pb tb)
-         let (z_a, z_b) = (interpolate_z ta bary_a, interpolate_z tb bary_b)
-         in if (z_a >= 0 && z_a < z_b) || z_b < 0
-            then (loca, ia)
-            else (locb, ib)
+    then (loca, z_a, ia)
+    else if (z_a >= 0 && z_a < z_b) || z_b < 0
+            then (loca, z_a, ia)
+            else (locb, z_b, ib)
 
-  let pixel_color (_loc, i): argb.colour =
+  let pixel_color (_loc, _z, i): argb.colour =
     if i == -1
     then argb.white
     else colours[i]
