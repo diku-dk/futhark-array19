@@ -1,5 +1,5 @@
 /lib
+/*.c
 /*.o
-/*_wrapper*
-/*_printf*
-/demo
+/*.h
+demo
