@@ -4,9 +4,6 @@ import "types"
 -- All of this is heavily copied from Martin Elsman's
 -- https://github.com/melsman/canvas demo, and only slightly modified to fit
 -- within the bounds of this 3D rasterizer.
---
--- FIXME: Also find the z values.  We currently do this in a separate pass in a
--- pretty inefficient way.
 
 let bubble
     (a: point_projected)
