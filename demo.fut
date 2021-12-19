@@ -12,6 +12,7 @@ module lys: lys with text_content = text_content = {
                  view_dist: f32, -- another way of expressing the FOV
                  draw_dist: f32,
                  camera: camera,
+                 is_still: bool,
                  triangles_coloured: [](triangle_coloured argb.colour),
                  triangles_in_view: [](triangle_slopes_with_amount, argb.colour),
                  keys: keys_state}
@@ -38,7 +39,7 @@ module lys: lys with text_content = text_content = {
     let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
                                                    camera triangles_coloured
     in {w, h,
-        view_dist, draw_dist, camera,
+        view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
         keys={shift=false, down=false, up=false, left=false, right=false,
               pagedown=false, pageup=false, minus=false, plus=false}}
@@ -86,7 +87,8 @@ module lys: lys with text_content = text_content = {
                      else s.draw_dist
    in s with camera = camera'
         with draw_dist = draw_dist'
-        with triangles_in_view = if camera_changes
+        with is_still = !camera_changes
+        with triangles_in_view = if camera_changes || !s.is_still
                                  then find_triangles_in_view s.h s.w s.view_dist s.draw_dist
                                                              s.camera s.triangles_coloured
                                  else s.triangles_in_view
