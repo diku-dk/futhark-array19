@@ -134,14 +134,3 @@ let render_triangles_in_view
   let (triangles_projected, colours) = unzip triangles_in_view
   in render_projected_triangles h w triangles_projected colours
 
-let render_triangles_in_view'
-    (h: i64)
-    (w: i64)
-    (view_dist: f32)
-    (draw_dist: f32)
-    (camera: camera)
-    (triangles_coloured: [](triangle_coloured argb.colour)): [h][w]argb.colour =
-  let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
-                                                 camera triangles_coloured
-  let (triangles_projected, colours) = unzip triangles_in_view
-  in render_projected_triangles h w triangles_projected colours
