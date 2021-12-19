@@ -12,4 +12,7 @@ type triangle = (vec3.vector, vec3.vector, vec3.vector)
 type triangle_coloured 'colour = {triangle: triangle, colour: colour}
 type triangle_projected = (point_projected, point_projected, point_projected)
 
+type triangle_slopes = (i32, (i32, i32), (i32, f32), (i32, f32), (f32, f32), (f32, f32), (f32, f32))
+type triangle_slopes_with_amount = (i64, triangle_slopes)
+
 type camera = {position: vec3.vector, orientation: vec3.vector}

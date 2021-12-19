@@ -27,11 +27,17 @@ let dxdz_dy (a: point_projected) (b: point_projected): (f32, f32) =
           let dy' = r32 dy
           in (dx / dy', dz / dy')
 
-let triangle_slopes ((p, q, r): triangle_projected): (i32, i32, i32, i32, f32, i32, f32, (f32, f32), (f32, f32), (f32, f32)) =
-  (p.y, q.y - p.y, r.y - p.y, p.x, p.z, r.x, r.z, dxdz_dy p q, dxdz_dy p r, let (a, b) = dxdz_dy q r in (-a, -b))
+let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
+  (p.y,
+   (q.y - p.y, r.y - p.y),
+   (p.x, p.z),
+   (r.x, r.z),
+   dxdz_dy p q,
+   dxdz_dy p r,
+   (let (a, b) = dxdz_dy q r in (-a, -b)))
 
 let get_line_in_triangle 'a
-    ((_, (p_y, q_y_minus_p_y, r_y_minus_p_y, p_x, p_z, r_x, r_z, (xsl1, zsl1), (xsl2, zsl2), (xsl3, zsl3)), aux): (i64, (i32, i32, i32, i32, f32, i32, f32, (f32, f32), (f32, f32), (f32, f32)), a))
+    (((_, (p_y, (q_y_minus_p_y, r_y_minus_p_y), (p_x, p_z), (r_x, r_z), (xsl1, zsl1), (xsl2, zsl2), (xsl3, zsl3))), aux): (triangle_slopes_with_amount, a))
     (i: i64): (line, a) =
   let i = i32.i64 i
   let y = p_y + i
@@ -45,13 +51,20 @@ let get_line_in_triangle 'a
      then half p_x p_z (xsl1, zsl1) (xsl2, zsl2) (r32 i) -- upper half
      else half r_x r_z (-xsl2, -zsl2) (xsl3, zsl3) (r32 (r_y_minus_p_y - i)) -- lower half
 
+let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes_with_amount =
+  map normalize triangles
+  |> map (\triangle -> (lines_in_triangle triangle, triangle_slopes triangle))
+
+-- Call this variant if your triangle data has already been prepared for the rasterizer.
+let lines_of_triangles_prepared 'a [n]
+    (triangles: [n](i64, triangle_slopes))
+    (aux: [n]a): [](line, a) =
+  expand (\((n, _), _) -> n) get_line_in_triangle (zip triangles aux)
+
 let lines_of_triangles 'a [n]
     (triangles: [n]triangle_projected)
     (aux: [n]a): [](line, a) =
-  -- FIXME PRECALC
-  let triangles' = map normalize triangles
-  in expand (\(n, _, _) -> n) get_line_in_triangle
-            (map2 (\(triangle: triangle_projected) aux' -> (lines_in_triangle triangle, triangle_slopes triangle, aux')) triangles' aux)
+  lines_of_triangles_prepared (prepare_triangles triangles) aux
 
 let points_in_line 'a (({y=_, x1, x2, z1=_, z2=_}, _): (line, a)): i64 =
   i64.i32 (1 + i32.abs (x2 - x1))
