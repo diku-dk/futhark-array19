@@ -56,26 +56,29 @@ module lys: lys with text_content = text_content = {
     let elevate_camera op (camera : camera) =
       camera with position.y = op camera.position.y (5 * move_factor)
 
-    let camera1 = if keys.down
-                  then move_camera (-) camera0
-                  else if keys.up
-                  then move_camera (+) camera0
-                  else camera0
-    let camera2 = if keys.left
-                  then turn_camera (-) camera1
-                  else if keys.right
-                  then turn_camera (+) camera1
-                  else camera1
-    let camera3 = if keys.pagedown
-                  then elevate_camera (+) camera2
-                  else if keys.pageup
-                  then elevate_camera (-) camera2
-                  else camera2
-    in camera3
+    let (camera1, changes) =
+      if keys.down
+      then (move_camera (-) camera0, true)
+      else if keys.up
+      then (move_camera (+) camera0, true)
+      else (camera0, false)
+    let (camera2, changes) =
+      if keys.left
+      then (turn_camera (-) camera1, true)
+      else if keys.right
+      then (turn_camera (+) camera1, true)
+      else (camera1, changes)
+    let (camera3, changes) =
+      if keys.pagedown
+      then (elevate_camera (+) camera2, true)
+      else if keys.pageup
+      then (elevate_camera (-) camera2, true)
+      else (camera2, changes)
+    in (camera3, changes)
 
   let step td (s: state) =
     let move_factor = 200 * td * if s.keys.shift then 6 else 1
-    let camera' = step_camera move_factor s.keys s.camera
+    let (camera', camera_changes) = step_camera move_factor s.keys s.camera
     let draw_dist' = if s.keys.plus
                      then s.draw_dist + 5 * move_factor
                      else if s.keys.minus
@@ -83,10 +86,10 @@ module lys: lys with text_content = text_content = {
                      else s.draw_dist
    in s with camera = camera'
         with draw_dist = draw_dist'
-        with triangles_in_view =
-          find_triangles_in_view s.h s.w s.view_dist s.draw_dist
-                                 s.camera s.triangles_coloured
-
+        with triangles_in_view = if camera_changes
+                                 then find_triangles_in_view s.h s.w s.view_dist s.draw_dist
+                                                             s.camera s.triangles_coloured
+                                 else s.triangles_in_view
 
   let resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
