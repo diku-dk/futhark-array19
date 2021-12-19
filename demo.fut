@@ -13,7 +13,7 @@ module lys: lys with text_content = text_content = {
                  draw_dist: f32,
                  camera: camera,
                  triangles_coloured: [](triangle_coloured argb.colour),
-                 triangles_in_view: [](triangle_projected, argb.colour),
+                 triangles_in_view: [](triangle_slopes_with_amount, argb.colour),
                  keys: keys_state}
 
   type text_content = text_content
@@ -43,7 +43,7 @@ module lys: lys with text_content = text_content = {
         keys={shift=false, down=false, up=false, left=false, right=false,
               pagedown=false, pageup=false, minus=false, plus=false}}
 
-  let render (s: state) = render_triangles_in_view s.h s.w s.triangles_in_view
+  let render (s: state) = render_triangles_in_view_prepared s.h s.w s.triangles_in_view
 
   let step_camera (move_factor: f32) (keys: keys_state) (camera0: camera) =
     let move_camera op (camera : camera) =

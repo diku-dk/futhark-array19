@@ -2,6 +2,9 @@ import "lib/github.com/athas/matte/colour"
 import "types"
 import "scanline"
 
+let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes_with_amount =
+  prepare_triangles triangles
+
 let rotate_point
   (angle: vec3.vector)
   (origo: vec3.vector)
@@ -30,18 +33,18 @@ let rotate_point
   in {x=x', y=y', z=z'}
 
 -- | Translate and rotate all points relative to the camera.
-let normalize_triangle
+let camera_normalize_triangle
     ({position=pc, orientation=po}: camera)
     ((p0, p1, p2): triangle): triangle =
 
-  let normalize_point (p: vec3.vector): vec3.vector =
+  let camera_normalize_point (p: vec3.vector): vec3.vector =
     let p' = {x= -pc.x, y= -pc.y, z= -pc.z} vec3.+ p
     let p'' = rotate_point {x= -po.x, y= -po.y, z= -po.z} {x=0.0, y=0.0, z=0.0} p'
     in p''
 
-  in (normalize_point p0,
-      normalize_point p1,
-      normalize_point p2)
+  in (camera_normalize_point p0,
+      camera_normalize_point p1,
+      camera_normalize_point p2)
 
 let project_triangle
     (h: i64) (w: i64)
@@ -66,11 +69,11 @@ let project_triangle
 let render_projected_triangles [n]
     (h: i64)
     (w: i64)
-    (triangles_projected: [n]triangle_projected)
+    (triangles_prepared: [n]triangle_slopes_with_amount)
     (colours: [n]argb.colour): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
   let aux = 0..<n
-  let lines = lines_of_triangles triangles_projected aux
+  let lines = lines_of_triangles_prepared triangles_prepared aux
   let points = points_of_lines lines
   let points' = filter (\({x, y, z=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
   let indices = map (\({x, y, z=_}, _) -> i64.i32 y * w + i64.i32 x) points'
@@ -102,11 +105,11 @@ let find_triangles_in_view
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
-    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_projected, argb.colour) =
+    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes_with_amount, argb.colour) =
   let triangles = map (.triangle) triangles_coloured
-  let triangles_normalized = map (normalize_triangle camera) triangles
+  let triangles_camera_normalized = map (camera_normalize_triangle camera) triangles
   let triangles_projected = map (project_triangle h w view_dist)
-                                triangles_normalized
+                                triangles_camera_normalized
 
   let close_enough_dist ({x=_, y=_, z}: point_projected): bool =
     0.0 <= z && z < draw_dist
@@ -125,12 +128,20 @@ let find_triangles_in_view
     ! (close_enough_fully_out_of_frame triangle)
 
   let colours = map (.colour) triangles_coloured
-  in filter (close_enough <-< (.0)) (zip triangles_projected colours)
+  let (triangles_projected', colours') = unzip (filter (close_enough <-< (.0)) (zip triangles_projected colours))
+  let triangles_slopes = prepare_triangles triangles_projected'
+  in zip triangles_slopes colours'
+
+let render_triangles_in_view_prepared
+    (h: i64)
+    (w: i64)
+    (triangles_in_view: [](triangle_slopes_with_amount, argb.colour)) =
+  let (triangles_slopes, colours) = unzip triangles_in_view
+  in render_projected_triangles h w triangles_slopes colours
 
 let render_triangles_in_view
     (h: i64)
     (w: i64)
     (triangles_in_view: [](triangle_projected, argb.colour)) =
   let (triangles_projected, colours) = unzip triangles_in_view
-  in render_projected_triangles h w triangles_projected colours
-
+  in render_triangles_in_view_prepared h w (zip (prepare_triangles triangles_projected) colours)
