@@ -89,10 +89,21 @@ let render_projected_triangles [n]
             then (loca, z_a, ia)
             else (locb, z_b, ib)
 
-  let pixel_color (_loc, _z, i): argb.colour =
+
+  -- FIXME: Generalize drawing system to pick one of these in a smart way.
+  let pixel_color_orig (_loc, _z, i): argb.colour =
     if i == -1
     then argb.white
     else colours[i]
+
+  -- Experiment: Visualize depth buffer
+  let pixel_color_depth_buffer (_loc, z, _i): argb.colour =
+    let f = if z < 0
+            then 1
+            else z / 100000 -- FIXME: don't use constants
+    in argb.gray f
+
+  let pixel_color = pixel_color_orig
 
   let pixels = replicate (h * w) empty
   let pixels' = reduce_by_index pixels update empty indices points''
