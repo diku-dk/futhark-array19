@@ -81,6 +81,7 @@ let camera_normalize_triangle
 let project_triangle
     (h: i64) (w: i64)
     (view_dist: f32)
+    (triangle_unnormalized: triangle)
     (triangle: triangle): triangle_projected =
 
   let project_point ({x, y, z}: vec3.vector): point_2d =
@@ -92,12 +93,13 @@ let project_triangle
     in {x=t32 x_projected, y=t32 y_projected}
 
   let ({x=x0, y=y0, z=z0}, {x=x1, y=y1, z=z1}, {x=x2, y=y2, z=z2}) = triangle
+  let ({x=ux0, y=uy0, z=uz0}, {x=ux1, y=uy1, z=uz1}, {x=ux2, y=uy2, z=uz2}) = triangle_unnormalized
   let {x=xp0, y=yp0} = project_point {x=x0, y=y0, z=z0}
   let {x=xp1, y=yp1} = project_point {x=x1, y=y1, z=z1}
   let {x=xp2, y=yp2} = project_point {x=x2, y=y2, z=z2}
-  in ({x=xp0, y=yp0, x_orig=x0, y_orig=y0, z=z0},
-      {x=xp1, y=yp1, x_orig=x1, y_orig=y1, z=z1},
-      {x=xp2, y=yp2, x_orig=x2, y_orig=y2, z=z2})
+  in ({x=xp0, y=yp0, x_orig=ux0, y_orig=uy0, z_orig=uz0, z=z0},
+      {x=xp1, y=yp1, x_orig=ux1, y_orig=uy1, z_orig=uz1, z=z1},
+      {x=xp2, y=yp2, x_orig=ux2, y_orig=uy2, z_orig=uz2, z=z2})
 
 -- | Render triangles using expand and reduce_by_index.
 let render_projected_triangles [n]
@@ -110,22 +112,22 @@ let render_projected_triangles [n]
   let aux = 0..<n
   let lines = lines_of_triangles_prepared triangles_prepared aux
   let points = points_of_lines lines
-  let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
-  let indices = map (\({x, y, z=_, x_orig=_, y_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y, z, x_orig, y_orig}, aux) -> (y * i32.i64 w + x, z, x_orig, y_orig, aux)) points'
-  let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -1)
+  let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
+  let indices = map (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
+  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, z, x_orig, y_orig, z_orig, aux)) points'
+  let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -f32.inf, -1)
 
-  let update (loca, z_a, x_orig_a, y_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, ib) =
+  let update (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib) =
     if ia == -1
-    then (locb, z_b, x_orig_b, y_orig_b, ib)
+    then (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib)
     else if ib == -1
-    then (loca, z_a, x_orig_a, y_orig_a, ia)
+    then (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia)
     else if (z_a >= 0 && z_a < z_b) || z_b < 0
-            then (loca, z_a, x_orig_a, y_orig_a, ia)
-            else (locb, z_b, x_orig_b, y_orig_b, ib)
+            then (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia)
+            else (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib)
 
   -- FIXME: Generalize drawing system to pick one of these in a smart way.
-  let pixel_color_orig (_loc, _z, _x_orig, _y_orig, i): argb.colour =
+  let pixel_color_orig (_loc, _z, _x_orig, _y_orig, _z_orig, i): argb.colour =
     if i == -1
     then argb.white
     else colours[i]
@@ -136,13 +138,13 @@ let render_projected_triangles [n]
     then 1
     else z / 100000 -- FIXME: don't use constants
 
-  let pixel_color_depth_buffer (_loc, z, _x_orig, _y_orig, _i): argb.colour =
+  let pixel_color_depth_buffer (_loc, z, _x_orig, _y_orig, _z_orig, _i): argb.colour =
     argb.gray (pixel_depth z)
 
   -- Experiment: Visualize height
-  let pixel_color_y (_loc, z, x_orig, y_orig, _i): argb.colour =
-    let base = camera_normalize_point_invert camera {x=x_orig, y=y_orig, z}
-    let f = (base.y + 4000) / 8000
+  let pixel_color_y (_loc, z, _x_orig, y_orig, _z_orig, _i): argb.colour =
+    -- let base = camera_normalize_point_invert camera {x=x_orig, y=y_orig, z=z_orig}
+    let f = (y_orig + 4000) / 8000
     in hsv_to_rgb (360 * f, 1 - pixel_depth z, 0.5) -- FIXME: don't use constants
 
   let pixel_color = pixel_color_y
@@ -161,10 +163,10 @@ let find_triangles_in_view
     (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes_with_amount, argb.colour) =
   let triangles = map (.triangle) triangles_coloured
   let triangles_camera_normalized = map (camera_normalize_triangle camera) triangles
-  let triangles_projected = map (project_triangle h w view_dist)
-                                triangles_camera_normalized
+  let triangles_projected = map2 (project_triangle h w view_dist)
+                                triangles triangles_camera_normalized
 
-  let close_enough_dist ({x=_, y=_, z, x_orig=_, y_orig=_}: point_projected): bool =
+  let close_enough_dist ({x=_, y=_, z, x_orig=_, y_orig=_, z_orig=_}: point_projected): bool =
     0.0 <= z && z < draw_dist
 
   let close_enough_fully_out_of_frame
