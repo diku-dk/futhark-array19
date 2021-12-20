@@ -1,6 +1,7 @@
 import "lib/github.com/athas/matte/colour"
 import "types"
 import "scanline"
+import "hsv"
 
 let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes_with_amount =
   prepare_triangles triangles
@@ -32,19 +33,50 @@ let rotate_point
   let (x', y', z') = (origo.x + x3, origo.y + y3, origo.z + z3)
   in {x=x', y=y', z=z'}
 
+let rotate_point_invert
+  (angle: vec3.vector)
+  (origo: vec3.vector)
+  (p: vec3.vector)
+  : vec3.vector =
+  let (x0, y0, z0) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
+
+  let (sin_x, cos_x) = (f32.sin angle.x, f32.cos angle.x)
+  let (sin_y, cos_y) = (f32.sin angle.y, f32.cos angle.y)
+  let (sin_z, cos_z) = (f32.sin angle.z, f32.cos angle.z)
+
+  -- Z axis.
+  let (x1, y1, z1) = (x0 * cos_z - y0 * sin_z,
+                      x0 * sin_z + y0 * cos_z,
+                      z0)
+  -- Y axis.
+  let (x2, y2, z2) = (z1 * sin_y + x1 * cos_y,
+                      y1,
+                      z1 * cos_y - x1 * sin_y)
+  -- X axis.
+  let (x3, y3, z3) = (x2,
+                      y2 * cos_x - z2 * sin_x,
+                      y2 * sin_x + z2 * cos_x)
+
+  let (x', y', z') = (origo.x + x3, origo.y + y3, origo.z + z3)
+  in {x=x', y=y', z=z'}
+
 -- | Translate and rotate all points relative to the camera.
+let camera_normalize_point ({position=pc, orientation=po}: camera) (p: vec3.vector): vec3.vector =
+  let p' = p vec3.+ {x= -pc.x, y= -pc.y, z= -pc.z}
+  let p'' = rotate_point {x= -po.x, y= -po.y, z= -po.z} {x=0.0, y=0.0, z=0.0} p'
+  in p''
+
+let camera_normalize_point_invert ({position=pc, orientation=po}: camera) (p: vec3.vector): vec3.vector =
+  let p' = rotate_point_invert {x= po.x, y= po.y, z= po.z} {x=0.0, y=0.0, z=0.0} p
+  let p'' = p' vec3.- {x= -pc.x, y= -pc.y, z= -pc.z}
+  in p''
+
 let camera_normalize_triangle
-    ({position=pc, orientation=po}: camera)
+    (camera: camera)
     ((p0, p1, p2): triangle): triangle =
-
-  let camera_normalize_point (p: vec3.vector): vec3.vector =
-    let p' = {x= -pc.x, y= -pc.y, z= -pc.z} vec3.+ p
-    let p'' = rotate_point {x= -po.x, y= -po.y, z= -po.z} {x=0.0, y=0.0, z=0.0} p'
-    in p''
-
-  in (camera_normalize_point p0,
-      camera_normalize_point p1,
-      camera_normalize_point p2)
+  (camera_normalize_point camera p0,
+   camera_normalize_point camera p1,
+   camera_normalize_point camera p2)
 
 let project_triangle
     (h: i64) (w: i64)
@@ -63,47 +95,57 @@ let project_triangle
   let {x=xp0, y=yp0} = project_point {x=x0, y=y0, z=z0}
   let {x=xp1, y=yp1} = project_point {x=x1, y=y1, z=z1}
   let {x=xp2, y=yp2} = project_point {x=x2, y=y2, z=z2}
-  in ({x=xp0, y=yp0, z=z0}, {x=xp1, y=yp1, z=z1}, {x=xp2, y=yp2, z=z2})
+  in ({x=xp0, y=yp0, x_orig=x0, y_orig=y0, z=z0},
+      {x=xp1, y=yp1, x_orig=x1, y_orig=y1, z=z1},
+      {x=xp2, y=yp2, x_orig=x2, y_orig=y2, z=z2})
 
 -- | Render triangles using expand and reduce_by_index.
 let render_projected_triangles [n]
     (h: i64)
     (w: i64)
+    (camera: camera)
     (triangles_prepared: [n]triangle_slopes_with_amount)
     (colours: [n]argb.colour): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
   let aux = 0..<n
   let lines = lines_of_triangles_prepared triangles_prepared aux
   let points = points_of_lines lines
-  let points' = filter (\({x, y, z=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
-  let indices = map (\({x, y, z=_}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y, z}, aux) -> (y * i32.i64 w + x, z, aux)) points'
-  let empty = (-1, -f32.inf, -1)
+  let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
+  let indices = map (\({x, y, z=_, x_orig=_, y_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
+  let points'' = map (\({x, y, z, x_orig, y_orig}, aux) -> (y * i32.i64 w + x, z, x_orig, y_orig, aux)) points'
+  let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -1)
 
-  let update (loca, z_a, ia) (locb, z_b, ib) =
+  let update (loca, z_a, x_orig_a, y_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, ib) =
     if ia == -1
-    then (locb, z_b, ib)
+    then (locb, z_b, x_orig_b, y_orig_b, ib)
     else if ib == -1
-    then (loca, z_a, ia)
+    then (loca, z_a, x_orig_a, y_orig_a, ia)
     else if (z_a >= 0 && z_a < z_b) || z_b < 0
-            then (loca, z_a, ia)
-            else (locb, z_b, ib)
-
+            then (loca, z_a, x_orig_a, y_orig_a, ia)
+            else (locb, z_b, x_orig_b, y_orig_b, ib)
 
   -- FIXME: Generalize drawing system to pick one of these in a smart way.
-  let pixel_color_orig (_loc, _z, i): argb.colour =
+  let pixel_color_orig (_loc, _z, _x_orig, _y_orig, i): argb.colour =
     if i == -1
     then argb.white
     else colours[i]
 
   -- Experiment: Visualize depth buffer
-  let pixel_color_depth_buffer (_loc, z, _i): argb.colour =
-    let f = if z < 0
-            then 1
-            else z / 100000 -- FIXME: don't use constants
-    in argb.gray f
+  let pixel_depth z =
+    if z < 0
+    then 1
+    else z / 100000 -- FIXME: don't use constants
 
-  let pixel_color = pixel_color_orig
+  let pixel_color_depth_buffer (_loc, z, _x_orig, _y_orig, _i): argb.colour =
+    argb.gray (pixel_depth z)
+
+  -- Experiment: Visualize height
+  let pixel_color_y (_loc, z, x_orig, y_orig, _i): argb.colour =
+    let base = camera_normalize_point_invert camera {x=x_orig, y=y_orig, z}
+    let f = (base.y + 4000) / 8000
+    in hsv_to_rgb (360 * f, 1 - pixel_depth z, 0.5) -- FIXME: don't use constants
+
+  let pixel_color = pixel_color_y
 
   let pixels = replicate (h * w) empty
   let pixels' = reduce_by_index pixels update empty indices points''
@@ -122,7 +164,7 @@ let find_triangles_in_view
   let triangles_projected = map (project_triangle h w view_dist)
                                 triangles_camera_normalized
 
-  let close_enough_dist ({x=_, y=_, z}: point_projected): bool =
+  let close_enough_dist ({x=_, y=_, z, x_orig=_, y_orig=_}: point_projected): bool =
     0.0 <= z && z < draw_dist
 
   let close_enough_fully_out_of_frame
@@ -146,13 +188,15 @@ let find_triangles_in_view
 let render_triangles_in_view_prepared
     (h: i64)
     (w: i64)
+    (camera: camera)
     (triangles_in_view: [](triangle_slopes_with_amount, argb.colour)) =
   let (triangles_slopes, colours) = unzip triangles_in_view
-  in render_projected_triangles h w triangles_slopes colours
+  in render_projected_triangles h w camera triangles_slopes colours
 
 let render_triangles_in_view
     (h: i64)
     (w: i64)
+    (camera: camera)
     (triangles_in_view: [](triangle_projected, argb.colour)) =
   let (triangles_projected, colours) = unzip triangles_in_view
-  in render_triangles_in_view_prepared h w (zip (prepare_triangles triangles_projected) colours)
+  in render_triangles_in_view_prepared h w camera (zip (prepare_triangles triangles_projected) colours)
