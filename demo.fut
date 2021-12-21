@@ -14,7 +14,7 @@ module lys: lys with text_content = text_content = {
                  camera: camera,
                  is_still: bool,
                  triangles_coloured: [](triangle_coloured argb.colour),
-                 triangles_in_view: [](triangle_slopes_with_amount, argb.colour),
+                 triangles_in_view: [](triangle_projected, triangle_slopes_with_amount, argb.colour),
                  keys: keys_state}
 
   type text_content = text_content

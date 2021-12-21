@@ -23,7 +23,7 @@ let dy (a: point_projected) (b: point_projected): slope =
   in if dy == 0
      then {x=0, z=0, x_orig=0, y_orig=0, z_orig=0}
      else let dx = r32 (b.x - a.x)
-          let dz = b.z - a.z
+          let dz = (1 / b.z) - (1 / a.z)
           let dx_orig = b.x_orig - a.x_orig
           let dy_orig = b.y_orig - a.y_orig
           let dz_orig = b.z_orig - a.z_orig
@@ -33,11 +33,11 @@ let dy (a: point_projected) (b: point_projected): slope =
 let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
   {p_y=p.y,
    y_subtracted_p_y={q=q.y - p.y, r=r.y - p.y},
-   p={x=p.x, z=p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=p.z_orig},
-   r={x=r.x, z=r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=r.z_orig},
-   s1=dy p q,
-   s2=dy p r,
-   s3=(let {x, z, x_orig, y_orig, z_orig} = dy q r in {x= -x, z= -z, x_orig= -x_orig, y_orig= -y_orig, z_orig= -z_orig})}
+   p={x=p.x, z=1 / p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=p.z_orig},
+   r={x=r.x, z=1 / r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=r.z_orig},
+   s1=(let s = dy p q in s),
+   s2=(let s = dy p r in s),
+   s3=(let s = dy q r in {x= -s.x, z= -s.z, x_orig= -s.x_orig, y_orig= -s.y_orig, z_orig= -s.z_orig})}
 
 let get_line_in_triangle 'a
     (((_, t), aux): (triangle_slopes_with_amount, a))
@@ -79,12 +79,13 @@ let points_in_line 'a (({y=_, x1, x2, z1=_, z2=_, x_orig1=_, x_orig2=_, y_orig1=
   i64.i32 (1 + i32.abs (x2 - x1))
 
 let get_point_in_line 'a (({y, x1, x2, z1, z2, x_orig1, x_orig2, y_orig1, y_orig2, z_orig1, z_orig2}, aux): (line, a)) (i: i64): (point_2d_with_interpolation, a) =
+  let fn = r32 (1 + i32.abs (x2 - x1)) in
   ({x=x1 + i32.sgn (x2 - x1) * i32.i64 i,
     y,
-    z=z1 + f32.sgn (z2 - z1) * f32.i64 i,
-    x_orig=x_orig1 + f32.sgn (x_orig2 - x_orig1) * f32.i64 i,
-    y_orig=y_orig1 + f32.sgn (y_orig2 - y_orig1) * f32.i64 i,
-    z_orig=z_orig1 + f32.sgn (z_orig2 - z_orig1) * f32.i64 i},
+    z=z1 + ((z2 - z1) / fn) * f32.i64 i,
+    x_orig=x_orig1 + ((x_orig2 - x_orig1) / fn) * f32.i64 i,
+    y_orig=y_orig1 + ((y_orig2 - y_orig1) / fn) * f32.i64 i,
+    z_orig=z_orig1 + ((z_orig2 - z_orig1) / fn) * f32.i64 i},
    aux)
 
 let points_of_lines 'a (lines: [](line, a)): [](point_2d_with_interpolation, a) =
