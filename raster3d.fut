@@ -82,7 +82,7 @@ let render_projected_triangles [n]
   let points = points_of_lines lines
   let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
   let indices = map (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, 1 / z, x_orig, y_orig, z_orig, aux)) points'
+  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, 1 / z, x_orig, y_orig, 1 / z_orig, aux)) points'
   let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -f32.inf, -1)
 
   let update (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib) =

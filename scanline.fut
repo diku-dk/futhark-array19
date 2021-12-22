@@ -26,15 +26,15 @@ let dy (a: point_projected) (b: point_projected): slope =
           let dz = (1 / b.z) - (1 / a.z)
           let dx_orig = b.x_orig - a.x_orig
           let dy_orig = b.y_orig - a.y_orig
-          let dz_orig = b.z_orig - a.z_orig
+          let dz_orig = (1 / b.z_orig) - (1 / a.z_orig)
           let dy' = r32 dy
           in {x=dx / dy', z=dz / dy', x_orig=dx_orig / dy', y_orig=dy_orig / dy', z_orig=dz_orig / dy'}
 
 let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
   {p_y=p.y,
    y_subtracted_p_y={q=q.y - p.y, r=r.y - p.y},
-   p={x=p.x, z=1 / p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=p.z_orig},
-   r={x=r.x, z=1 / r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=r.z_orig},
+   p={x=p.x, z=1 / p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=1 / p.z_orig},
+   r={x=r.x, z=1 / r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=1 / r.z_orig},
    s1=(let s = dy p q in s),
    s2=(let s = dy p r in s),
    s3=(let s = dy q r in {x= -s.x, z= -s.z, x_orig= -s.x_orig, y_orig= -s.y_orig, z_orig= -s.z_orig})}
