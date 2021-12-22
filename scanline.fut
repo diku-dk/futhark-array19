@@ -4,29 +4,33 @@ import "types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
-let bubble
+let bubble_point
     (a: point_projected)
     (b: point_projected): (point_projected, point_projected) =
   if b.y < a.y then (b, a) else (a, b)
 
-let normalize ((p, q, r): triangle_projected): triangle_projected =
-  let (p, q) = bubble p q
-  let (q, r) = bubble q r
-  let (p, q) = bubble p q
+let normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
+  let (p, q) = bubble_point p q
+  let (q, r) = bubble_point q r
+  let (p, q) = bubble_point p q
   in (p, q, r)
 
 let lines_in_triangle ((p, _, r): (triangle_projected)): i64 =
   i64.i32 (r.y - p.y + 1)
 
+let z_inv (z: f32): f32 =
+  1 / z
+
 let dy (a: point_projected) (b: point_projected): slope =
   let dy = b.y - a.y
   in if dy == 0
-     then {x=0, z=0, x_orig=0, y_orig=0, z_orig=0}
+     then {x=0, z=0,
+           x_orig=0, y_orig=0, z_orig=0}
      else let dx = r32 (b.x - a.x)
-          let dz = (1 / b.z) - (1 / a.z)
+          let dz = z_inv b.z - z_inv a.z
           let dx_orig = b.x_orig - a.x_orig
           let dy_orig = b.y_orig - a.y_orig
-          let dz_orig = (1 / b.z_orig) - (1 / a.z_orig)
+          let dz_orig = z_inv b.z_orig - z_inv a.z_orig
           let dy' = r32 dy
           in {x=dx / dy',
               z=dz / dy',
@@ -34,14 +38,17 @@ let dy (a: point_projected) (b: point_projected): slope =
               y_orig=dy_orig / dy',
               z_orig=dz_orig / dy'}
 
+let neg_slope (s: slope): slope =
+  {x= -s.x, z= -s.z, x_orig= -s.x_orig, y_orig= -s.y_orig, z_orig= -s.z_orig}
+
 let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
   {p_y=p.y,
    y_subtracted_p_y={q=q.y - p.y, r=r.y - p.y},
-   p={x=p.x, z=1 / p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=1 / p.z_orig},
-   r={x=r.x, z=1 / r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=1 / r.z_orig},
-   s1=(let s = dy p q in s),
-   s2=(let s = dy p r in s),
-   s3=(let s = dy q r in {x= -s.x, z= -s.z, x_orig= -s.x_orig, y_orig= -s.y_orig, z_orig= -s.z_orig})}
+   p={x=p.x, z=z_inv p.z, x_orig=p.x_orig, y_orig=p.y_orig, z_orig=z_inv p.z_orig},
+   r={x=r.x, z=z_inv r.z, x_orig=r.x_orig, y_orig=r.y_orig, z_orig=z_inv r.z_orig},
+   s1=dy p q,
+   s2=dy p r,
+   s3=neg_slope (dy q r)}
 
 let get_line_in_triangle 'a
     (((_, t), aux): (triangle_slopes_with_amount, a))
@@ -80,22 +87,16 @@ let get_line_in_triangle 'a
          z_orig}, aux)
   in if i <= t.y_subtracted_p_y.q
      then half t.p t.s1 t.s2 (r32 i) -- upper half
-     else half t.r {x= -t.s2.x, z= -t.s2.z, x_orig= -t.s2.x_orig, y_orig= -t.s2.y_orig, z_orig= -t.s2.z_orig} t.s3 (r32 (t.y_subtracted_p_y.r - i)) -- lower half
+     else half t.r (neg_slope t.s2) t.s3 (r32 (t.y_subtracted_p_y.r - i)) -- lower half
 
 let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes_with_amount =
-  map normalize triangles
+  map normalize_triangle_points triangles
   |> map (\triangle -> (lines_in_triangle triangle, triangle_slopes triangle))
 
--- Call this variant if your triangle data has already been prepared for the rasterizer.
-let lines_of_triangles_prepared 'a [n]
+let lines_of_triangles 'a [n]
     (triangles: [n](i64, triangle_slopes))
     (aux: [n]a): [](line, a) =
   expand (\((n, _), _) -> n) get_line_in_triangle (zip triangles aux)
-
-let lines_of_triangles 'a [n]
-    (triangles: [n]triangle_projected)
-    (aux: [n]a): [](line, a) =
-  lines_of_triangles_prepared (prepare_triangles triangles) aux
 
 let points_in_line 'a ((line, _): (line, a)): i64 =
   i64.i32 line.n_points

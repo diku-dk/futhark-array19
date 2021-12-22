@@ -78,11 +78,11 @@ let render_projected_triangles [n]
     (colours: [n]argb.colour): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
   let aux = 0..<n
-  let lines = lines_of_triangles_prepared triangles_prepared aux
+  let lines = lines_of_triangles triangles_prepared aux
   let points = points_of_lines lines
   let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
   let indices = map (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, 1 / z, x_orig, y_orig, 1 / z_orig, aux)) points'
+  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, z_inv z, x_orig, y_orig, z_inv z_orig, aux)) points'
   let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -f32.inf, -1)
 
   let update (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib) =
@@ -154,16 +154,9 @@ let find_triangles_in_view
   let triangles_slopes = prepare_triangles triangles_projected'
   in zip triangles_slopes colours'
 
-let render_triangles_in_view_prepared
+let render_triangles_in_view
     (h: i64)
     (w: i64)
     (triangles_in_view: [](triangle_slopes_with_amount, argb.colour)) =
   let (triangles_slopes, colours) = unzip triangles_in_view
   in render_projected_triangles h w triangles_slopes colours
-
-let render_triangles_in_view
-    (h: i64)
-    (w: i64)
-    (triangles_in_view: [](triangle_projected, argb.colour)) =
-  let (triangles_projected, colours) = unzip triangles_in_view
-  in render_triangles_in_view_prepared h w (zip (prepare_triangles triangles_projected) colours)
