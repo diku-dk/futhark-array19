@@ -14,7 +14,7 @@ module lys: lys with text_content = text_content = {
                  camera: camera,
                  is_still: bool,
                  triangles_coloured: [](triangle_coloured argb.colour),
-                 triangles_in_view: [](triangle_slopes_with_amount, argb.colour),
+                 triangles_in_view: [](triangle_slopes, argb.colour),
                  keys: keys_state}
 
   type text_content = text_content
@@ -36,15 +36,17 @@ module lys: lys with text_content = text_content = {
                   orientation={x=0, y=0, z=0}}
 
     let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 (i32.u32 terrain_seed)
-    let triangles_in_view = find_triangles_in_view h w view_dist draw_dist
-                                                   camera triangles_coloured
+    let triangles_in_view = project_triangles_in_view h w view_dist draw_dist
+                                                      camera triangles_coloured
     in {w, h,
         view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
         keys={shift=false, down=false, up=false, left=false, right=false,
               pagedown=false, pageup=false, minus=false, plus=false}}
 
-  let render (s: state) = render_triangles_in_view s.h s.w s.triangles_in_view
+  let render (s: state) =
+    let (triangles_slopes, colours) = unzip s.triangles_in_view
+    in render_projected_triangles s.h s.w triangles_slopes colours
 
   let step_camera (move_factor: f32) (keys: keys_state) (camera0: camera) =
     let move_camera op (camera : camera) =
@@ -89,8 +91,8 @@ module lys: lys with text_content = text_content = {
         with draw_dist = draw_dist'
         with is_still = !camera_changes
         with triangles_in_view = if camera_changes || !s.is_still
-                                 then find_triangles_in_view s.h s.w s.view_dist s.draw_dist
-                                                             camera' s.triangles_coloured
+                                 then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
+                                                                camera' s.triangles_coloured
                                  else s.triangles_in_view
 
   let resize (h: i64) (w: i64) (s: state) =

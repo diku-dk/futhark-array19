@@ -3,8 +3,20 @@ import "types"
 import "scanline"
 import "hsv"
 
-let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes_with_amount =
-  prepare_triangles triangles
+let bubble_point
+    (a: point_projected)
+    (b: point_projected): (point_projected, point_projected) =
+  if b.projected.y < a.projected.y then (b, a) else (a, b)
+
+let normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
+  let (p, q) = bubble_point p q
+  let (q, r) = bubble_point q r
+  let (p, q) = bubble_point p q
+  in (p, q, r)
+
+let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
+  map normalize_triangle_points triangles
+  |> map (\triangle -> triangle_slopes triangle)
 
 let rotate_point
   (angle: vec3.vector)
@@ -66,23 +78,24 @@ let project_triangle
   let {x=xp1, y=yp1} = project_point {x=x1, y=y1, z=z1}
   let {x=xp2, y=yp2} = project_point {x=x2, y=y2, z=z2}
 
-  in ({x=xp0, y=yp0, x_orig=ux0, y_orig=uy0, z_orig=uz0, z=z0},
-      {x=xp1, y=yp1, x_orig=ux1, y_orig=uy1, z_orig=uz1, z=z1},
-      {x=xp2, y=yp2, x_orig=ux2, y_orig=uy2, z_orig=uz2, z=z2})
+  in ({projected={x=xp0, y=yp0}, world={x=ux0, y=uy0, z=uz0}, z=z0},
+      {projected={x=xp1, y=yp1}, world={x=ux1, y=uy1, z=uz1}, z=z1},
+      {projected={x=xp2, y=yp2}, world={x=ux2, y=uy2, z=uz2}, z=z2})
 
 -- | Render triangles using expand and reduce_by_index.
 let render_projected_triangles [n]
     (h: i64)
     (w: i64)
-    (triangles_prepared: [n]triangle_slopes_with_amount)
+    (triangles_prepared: [n]triangle_slopes)
     (colours: [n]argb.colour): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
   let aux = 0..<n
   let lines = lines_of_triangles triangles_prepared aux
   let points = points_of_lines lines
-  let points' = filter (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> x >= 0 && x < i32.i64 w && y >=0 && y < i32.i64 h) points
-  let indices = map (\({x, y, z=_, x_orig=_, y_orig=_, z_orig=_}, _) -> i64.i32 y * w + i64.i32 x) points'
-  let points'' = map (\({x, y, z, x_orig, y_orig, z_orig}, aux) -> (y * i32.i64 w + x, z_inv z, x_orig, y_orig, z_inv z_orig, aux)) points'
+  let points' = filter (\(p, _) ->
+                          p.projected.x >= 0 && p.projected.x < i32.i64 w && p.projected.y >=0 && p.projected.y < i32.i64 h) points
+  let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
+  let points'' = map (\(p, aux) -> (p.projected.y * i32.i64 w + p.projected.x, z_inv p.z, p.world.x, p.world.y, z_inv p.world.z, aux)) points'
   let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -f32.inf, -1)
 
   let update (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib) =
@@ -121,27 +134,27 @@ let render_projected_triangles [n]
   let pixels'' = map pixel_color pixels'
   in unflatten h w pixels''
 
-let find_triangles_in_view
+let project_triangles_in_view
     (h: i64)
     (w: i64)
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
-    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes_with_amount, argb.colour) =
+    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes, argb.colour) =
   let triangles = map (.triangle) triangles_coloured
   let triangles_camera_normalized = map (camera_normalize_triangle camera) triangles
   let triangles_projected = map2 (project_triangle h w view_dist)
-                                triangles triangles_camera_normalized
+                                 triangles triangles_camera_normalized
 
-  let close_enough_dist ({x=_, y=_, z, x_orig=_, y_orig=_, z_orig=_}: point_projected): bool =
-    0.0 <= z && z < draw_dist
+  let close_enough_dist (p: point_projected): bool =
+    0.0 <= p.z && p.z < draw_dist
 
   let close_enough_fully_out_of_frame
       ((p0, p1, p2): triangle_projected): bool =
-    (p0.x < 0 && p1.x < 0 && p2.x < 0) ||
-    (p0.x >= i32.i64 w && p1.x >= i32.i64 w && p2.x >= i32.i64 w) ||
-    (p0.y < 0 && p1.y < 0 && p2.y < 0) ||
-    (p0.y >= i32.i64 h && p1.y >= i32.i64 h && p2.y >= i32.i64 h)
+    (p0.projected.x < 0 && p1.projected.x < 0 && p2.projected.x < 0) ||
+    (p0.projected.x >= i32.i64 w && p1.projected.x >= i32.i64 w && p2.projected.x >= i32.i64 w) ||
+    (p0.projected.y < 0 && p1.projected.y < 0 && p2.projected.y < 0) ||
+    (p0.projected.y >= i32.i64 h && p1.projected.y >= i32.i64 h && p2.projected.y >= i32.i64 h)
 
   let close_enough (triangle: triangle_projected): bool =
     (close_enough_dist triangle.0 ||
@@ -153,10 +166,3 @@ let find_triangles_in_view
   let (triangles_projected', colours') = unzip (filter (close_enough <-< (.0)) (zip triangles_projected colours))
   let triangles_slopes = prepare_triangles triangles_projected'
   in zip triangles_slopes colours'
-
-let render_triangles_in_view
-    (h: i64)
-    (w: i64)
-    (triangles_in_view: [](triangle_slopes_with_amount, argb.colour)) =
-  let (triangles_slopes, colours) = unzip triangles_in_view
-  in render_projected_triangles h w triangles_slopes colours
