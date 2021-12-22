@@ -55,7 +55,12 @@ let get_line_in_triangle 'a
     let y_orig2 = p.y_orig + s2.y_orig * i'
     let z_orig1 = p.z_orig + s1.z_orig * i'
     let z_orig2 = p.z_orig + s2.z_orig * i'
-    in ({y, x1, x2, z1, z2, x_orig1, x_orig2, y_orig1, y_orig2, z_orig1, z_orig2}, aux)
+    let fn = r32 (1 + i32.abs (x2 - x1))
+    let z = (z2 - z1) / fn
+    let x_orig = (x_orig2 - x_orig1) / fn
+    let y_orig = (y_orig2 - y_orig1) / fn
+    let z_orig = (z_orig2 - z_orig1) / fn
+    in ({y, x = i32.sgn (x2 - x1), x1, z, z1, x_orig1, y_orig1, z_orig1, n_points = (1 + i32.abs (x2 - x1)), x_orig, y_orig, z_orig}, aux)
   in if i <= t.y_subtracted_p_y.q
      then half t.p t.s1 t.s2 (r32 i) -- upper half
      else half t.r {x= -t.s2.x, z= -t.s2.z, x_orig= -t.s2.x_orig, y_orig= -t.s2.y_orig, z_orig= -t.s2.z_orig} t.s3 (r32 (t.y_subtracted_p_y.r - i)) -- lower half
@@ -75,17 +80,17 @@ let lines_of_triangles 'a [n]
     (aux: [n]a): [](line, a) =
   lines_of_triangles_prepared (prepare_triangles triangles) aux
 
-let points_in_line 'a (({y=_, x1, x2, z1=_, z2=_, x_orig1=_, x_orig2=_, y_orig1=_, y_orig2=_, z_orig1=_, z_orig2=_}, _): (line, a)): i64 =
-  i64.i32 (1 + i32.abs (x2 - x1))
+let points_in_line 'a ((line, _): (line, a)): i64 =
+  i64.i32 line.n_points
 
-let get_point_in_line 'a (({y, x1, x2, z1, z2, x_orig1, x_orig2, y_orig1, y_orig2, z_orig1, z_orig2}, aux): (line, a)) (i: i64): (point_2d_with_interpolation, a) =
-  let fn = r32 (1 + i32.abs (x2 - x1)) in
-  ({x=x1 + i32.sgn (x2 - x1) * i32.i64 i,
+let get_point_in_line 'a (({y, x, n_points=_, x1, z, z1, x_orig1, y_orig1, z_orig1, x_orig, y_orig, z_orig}, aux): (line, a)) (i: i64): (point_2d_with_interpolation, a) =
+  let i' = f32.i64 i in
+  ({x=x1 + x * i32.i64 i,
     y,
-    z=z1 + ((z2 - z1) / fn) * f32.i64 i,
-    x_orig=x_orig1 + ((x_orig2 - x_orig1) / fn) * f32.i64 i,
-    y_orig=y_orig1 + ((y_orig2 - y_orig1) / fn) * f32.i64 i,
-    z_orig=z_orig1 + ((z_orig2 - z_orig1) / fn) * f32.i64 i},
+    z=z1 + z * i',
+    x_orig=x_orig1 + x_orig * i',
+    y_orig=y_orig1 + y_orig * i',
+    z_orig=z_orig1 + z_orig * i'},
    aux)
 
 let points_of_lines 'a (lines: [](line, a)): [](point_2d_with_interpolation, a) =

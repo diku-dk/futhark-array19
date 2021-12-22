@@ -6,8 +6,6 @@ type point_projected = {x: i32, y: i32, x_orig: f32, y_orig: f32, z_orig: f32, z
 type point_2d = {x: i32, y: i32}
 type point_2d_with_interpolation = {x: i32, y: i32, z: f32, x_orig: f32, y_orig: f32, z_orig: f32}
 
-type line = {y: i32, x1: i32, x2: i32, z1: f32, z2: f32, x_orig1: f32, x_orig2: f32, y_orig1: f32, y_orig2: f32, z_orig1: f32, z_orig2: f32}
-
 type triangle = (vec3.vector, vec3.vector, vec3.vector)
 type triangle_coloured 'colour = {triangle: triangle, colour: colour}
 type triangle_projected = (point_projected, point_projected, point_projected)
@@ -22,5 +20,13 @@ type triangle_slopes = {p_y: i32,
                          s2: slope,
                          s3: slope}
 type triangle_slopes_with_amount = (i64, triangle_slopes)
+
+type line = {y: i32, x1: i32, z1: f32, x_orig1: f32, y_orig1: f32, z_orig1: f32,
+             x: i32,
+             z: f32,
+             x_orig: f32,
+             y_orig: f32,
+             z_orig: f32,
+             n_points: i32}
 
 type camera = {position: vec3.vector, orientation: vec3.vector}
