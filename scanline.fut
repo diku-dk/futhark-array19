@@ -66,18 +66,6 @@ let get_line_in_triangle 'a
          step = {projected={x=i32.sgn (x2 - x1)}, z=z,
                  world={x=x_orig, y=y_orig, z=z_orig}}},
          aux)
-
-         -- x1,
-         -- z1,
-         -- x_orig1,
-         -- y_orig1,
-         -- z_orig1,
-
-         -- x = i32.sgn (x2 - x1),
-         -- z,
-         -- x_orig,
-         -- y_orig,
-         -- z_orig}, aux)
   in if i <= t.y_subtracted_p_y.q
      then half t.p t.s1 t.s2 (r32 i) -- upper half
      else half t.r (neg_slope t.s2) t.s3 (r32 (t.y_subtracted_p_y.r - i)) -- lower half

@@ -28,16 +28,4 @@ type line = {n_points: i32,
              leftmost: line_component,
              step: line_component}
 
-             -- x1: i32,
-             -- z1: f32,
-             -- x_orig1: f32,
-             -- y_orig1: f32,
-             -- z_orig1: f32,
-
-             -- x: i32,
-             -- z: f32,
-             -- x_orig: f32,
-             -- y_orig: f32,
-             -- z_orig: f32}
-
 type camera = {position: vec3.vector, orientation: vec3.vector}
