@@ -110,7 +110,7 @@ let render_projected_triangles [n]
     argb.gray (pixel_depth z)
 
   -- Experiment: Visualize height
-  let pixel_color_y (loc, z, _x_orig, y_orig, z_orig, i): argb.colour =
+  let pixel_color_y (_loc, z, _x_orig, y_orig, _z_orig, _i): argb.colour =
     let f = (y_orig + 4000) / 8000 -- FIXME: don't use constants
     in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth z, 0.5)
 
