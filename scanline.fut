@@ -42,7 +42,7 @@ let get_line_in_triangle 'a
     (i: i64): (line, a) =
   let i = i32.i64 i
   let y = t.p_y + i
-  let half (p: slope_point) (s1: slope) (s2: slope) (i': f32) =
+  let half (p: slope_point) (s1: slope) (s2: slope) (i': f32): (line, a) =
     let x1 = p.projected.x + t32 (f32.round (s1.projected.x * i'))
     let x2 = p.projected.x + t32 (f32.round (s2.projected.x * i'))
     let z1 = p.z + s1.z * i'
@@ -53,14 +53,14 @@ let get_line_in_triangle 'a
     let y_orig2 = p.world.y + s2.world.y * i'
     let z_orig1 = p.world.z + s1.world.z * i'
     let z_orig2 = p.world.z + s2.world.z * i'
-    let fn = r32 (1 + i32.abs (x2 - x1))
+    let n_points = 1 + i32.abs (x2 - x1)
+    let fn = r32 n_points
     let z = (z2 - z1) / fn
     let x_orig = (x_orig2 - x_orig1) / fn
     let y_orig = (y_orig2 - y_orig1) / fn
     let z_orig = (z_orig2 - z_orig1) / fn
-    in ({n_points = (1 + i32.abs (x2 - x1)),
+    in ({n_points,
          y,
-
          leftmost = {projected={x=x1}, z=z1,
                      world={x=x_orig1, y=y_orig1, z=z_orig1}},
          step = {projected={x=i32.sgn (x2 - x1)}, z=z,
