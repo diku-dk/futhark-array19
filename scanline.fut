@@ -10,7 +10,7 @@ let z_inv (z: f32): f32 =
 let slope (a: point_projected) (b: point_projected): slope =
   let dy = b.projected.y - a.projected.y
   in if dy == 0
-     then {projected={x=0}, z=0, world={x=0, y=0, z=0}}
+     then {projected={x=0}, z=0, world=vec3.zero}
      else let dy' = r32 dy
           in {projected={x=r32 (b.projected.x - a.projected.x) / dy'},
               z=(z_inv b.z - z_inv a.z) / dy',

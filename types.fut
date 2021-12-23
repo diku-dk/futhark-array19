@@ -28,4 +28,6 @@ type line = {n_points: i32,
              leftmost: line_component,
              step: line_component}
 
+type point_projected_1d = base_component {i: i32}
+
 type camera = {position: vec3.vector, orientation: vec3.vector}

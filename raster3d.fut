@@ -46,23 +46,23 @@ let rotate_point
   in {x=x', y=y', z=z'}
 
 -- | Translate and rotate all points relative to the camera.
-let camera_normalize_point ({position=pc, orientation=po}: camera) (p: vec3.vector): vec3.vector =
-  let p' = p vec3.+ {x= -pc.x, y= -pc.y, z= -pc.z}
-  let p'' = rotate_point {x= -po.x, y= -po.y, z= -po.z} {x=0.0, y=0.0, z=0.0} p'
-  in p''
-
 let camera_normalize_triangle
-    (camera: camera)
-    ((p0, p1, p2): triangle): triangle =
-  (camera_normalize_point camera p0,
-   camera_normalize_point camera p1,
-   camera_normalize_point camera p2)
+    ({position=pc, orientation=po}: camera)
+    ((p, q, r): triangle): triangle =
+
+  let camera_normalize_point (p: vec3.vector): vec3.vector =
+    vec3.(p - pc)
+    |> rotate_point vec3.(zero - po) vec3.zero
+
+  in (camera_normalize_point p,
+      camera_normalize_point q,
+      camera_normalize_point r)
 
 let project_triangle
     (h: i64) (w: i64)
     (view_dist: f32)
-    (triangle_unnormalized: triangle)
-    (triangle: triangle): triangle_projected =
+    (camera: camera)
+    (world: triangle): triangle_projected =
 
   let project_point ({x, y, z}: vec3.vector): point_2d =
     let z_ratio = if z >= 0.0
@@ -72,68 +72,12 @@ let project_triangle
     let y_projected = y / z_ratio + f32.i64 h / 2.0
     in {x=t32 x_projected, y=t32 y_projected}
 
-  let ({x=x0, y=y0, z=z0}, {x=x1, y=y1, z=z1}, {x=x2, y=y2, z=z2}) = triangle
-  let ({x=ux0, y=uy0, z=uz0}, {x=ux1, y=uy1, z=uz1}, {x=ux2, y=uy2, z=uz2}) = triangle_unnormalized
-  let {x=xp0, y=yp0} = project_point {x=x0, y=y0, z=z0}
-  let {x=xp1, y=yp1} = project_point {x=x1, y=y1, z=z1}
-  let {x=xp2, y=yp2} = project_point {x=x2, y=y2, z=z2}
+  let normalized = camera_normalize_triangle camera world
+  in ({projected=project_point normalized.0, world=world.0, z=normalized.0.z},
+      {projected=project_point normalized.1, world=world.1, z=normalized.1.z},
+      {projected=project_point normalized.2, world=world.2, z=normalized.2.z})
 
-  in ({projected={x=xp0, y=yp0}, world={x=ux0, y=uy0, z=uz0}, z=z0},
-      {projected={x=xp1, y=yp1}, world={x=ux1, y=uy1, z=uz1}, z=z1},
-      {projected={x=xp2, y=yp2}, world={x=ux2, y=uy2, z=uz2}, z=z2})
-
--- | Render triangles using expand and reduce_by_index.
-let render_projected_triangles [n]
-    (h: i64)
-    (w: i64)
-    (triangles_prepared: [n]triangle_slopes)
-    (colours: [n]argb.colour): [h][w]argb.colour =
-  -- Store the triangle indices along the found lines and points.
-  let aux = 0..<n
-  let lines = lines_of_triangles triangles_prepared aux
-  let points = points_of_lines lines
-  let points' = filter (\(p, _) ->
-                          p.projected.x >= 0 && p.projected.x < i32.i64 w && p.projected.y >=0 && p.projected.y < i32.i64 h) points
-  let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
-  let points'' = map (\(p, aux) -> (p.projected.y * i32.i64 w + p.projected.x, z_inv p.z, p.world.x, p.world.y, z_inv p.world.z, aux)) points'
-  let empty = (-1, -f32.inf, -f32.inf, -f32.inf, -f32.inf, -1)
-
-  let update (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia) (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib) =
-    if ia == -1
-    then (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib)
-    else if ib == -1
-    then (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia)
-    else if (z_a >= 0 && z_a < z_b) || z_b < 0
-    then (loca, z_a, x_orig_a, y_orig_a, z_orig_a, ia)
-    else (locb, z_b, x_orig_b, y_orig_b, z_orig_b, ib)
-
-  -- FIXME: Generalize drawing system to pick one of these in a smart way.
-  let pixel_color_orig (_loc, _z, _x_orig, _y_orig, _z_orig, i): argb.colour =
-    if i == -1
-    then argb.white
-    else colours[i]
-
-  -- Experiment: Visualize depth buffer
-  let pixel_depth z =
-    if z < 0
-    then 1
-    else z / 100000 -- FIXME: don't use constants
-
-  let pixel_color_depth_buffer (_loc, z, _x_orig, _y_orig, _z_orig, _i): argb.colour =
-    argb.gray (pixel_depth z)
-
-  -- Experiment: Visualize height
-  let pixel_color_y (_loc, z, _x_orig, y_orig, _z_orig, _i): argb.colour =
-    let f = (y_orig + 4000) / 8000 -- FIXME: don't use constants
-    in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth z, 0.5)
-
-  let pixel_color = pixel_color_y
-
-  let pixels = replicate (h * w) empty
-  let pixels' = reduce_by_index pixels update empty indices points''
-  let pixels'' = map pixel_color pixels'
-  in unflatten h w pixels''
-
+-- | Project triangles currently visible from the camera.
 let project_triangles_in_view
     (h: i64)
     (w: i64)
@@ -141,10 +85,9 @@ let project_triangles_in_view
     (draw_dist: f32)
     (camera: camera)
     (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes, argb.colour) =
+
   let triangles = map (.triangle) triangles_coloured
-  let triangles_camera_normalized = map (camera_normalize_triangle camera) triangles
-  let triangles_projected = map2 (project_triangle h w view_dist)
-                                 triangles triangles_camera_normalized
+  let triangles_projected = map (project_triangle h w view_dist camera) triangles
 
   let close_enough_dist (p: point_projected): bool =
     0.0 <= p.z && p.z < draw_dist
@@ -163,6 +106,61 @@ let project_triangles_in_view
     ! (close_enough_fully_out_of_frame triangle)
 
   let colours = map (.colour) triangles_coloured
-  let (triangles_projected', colours') = unzip (filter (close_enough <-< (.0)) (zip triangles_projected colours))
+  let (triangles_projected', colours') =
+    unzip (filter (close_enough <-< (.0)) (zip triangles_projected colours))
   let triangles_slopes = prepare_triangles triangles_projected'
   in zip triangles_slopes colours'
+
+-- | Render projected triangles using expand and reduce_by_index.
+let render_projected_triangles [n]
+    (h: i64)
+    (w: i64)
+    (triangles_prepared: [n]triangle_slopes)
+    (colours: [n]argb.colour): [h][w]argb.colour =
+  -- Store the triangle indices along the found lines and points.
+  let aux = 0..<n
+  let lines = lines_of_triangles triangles_prepared aux
+  let points = points_of_lines lines
+  let points' = filter (\(p, _) ->
+                          p.projected.x >= 0 && p.projected.x < i32.i64 w
+                          && p.projected.y >=0 && p.projected.y < i32.i64 h) points
+  let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
+  let points'' = map (\(p, aux) -> ({projected={i=p.projected.y * i32.i64 w + p.projected.x}, z=z_inv p.z,
+                                     world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}}, aux)) points'
+  let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, -1)
+
+  let update ((a, aux_a): (point_projected_1d, i64)) ((b, aux_b): (point_projected_1d, i64)): (point_projected_1d, i64) =
+    if aux_a == -1 -- fixme superfluous?
+    then (b, aux_b)
+    else if aux_b == -1
+    then (a, aux_a)
+    else if (a.z >= 0 && a.z < b.z) || b.z < 0
+    then (a, aux_a)
+    else (b, aux_b)
+
+  -- FIXME: Generalize drawing system to pick one of these in a smart way.
+  let pixel_color_orig ((p, _aux): (point_projected_1d, i64)): argb.colour =
+    if p.projected.i == -1
+    then argb.white
+    else colours[p.projected.i]
+
+  -- Experiment: Visualize depth buffer
+  let pixel_depth (z: f32): f32 =
+    if z < 0
+    then 1
+    else z / 100000 -- FIXME: don't use constants
+
+  let pixel_color_depth_buffer ((p, _aux): (point_projected_1d, i64)): argb.colour =
+    argb.gray (pixel_depth p.z)
+
+  -- Experiment: Visualize height
+  let pixel_color_y ((p, _aux): (point_projected_1d, i64)): argb.colour =
+    let f = (p.world.y + 4000) / 8000 -- FIXME: don't use constants
+    in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth p.z, 0.5)
+
+  let pixel_color = pixel_color_y
+
+  let pixels = replicate (h * w) empty
+  let pixels' = reduce_by_index pixels update empty indices points''
+  let pixels'' = map pixel_color pixels'
+  in unflatten h w pixels''
