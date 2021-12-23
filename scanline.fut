@@ -7,64 +7,64 @@ import "types"
 let z_inv (z: f32): f32 =
   1 / z
 
-let dy (a: point_projected) (b: point_projected): slope =
+let slope (a: point_projected) (b: point_projected): slope =
   let dy = b.projected.y - a.projected.y
   in if dy == 0
-     then {projected={x=0}, z=0,
-           world={x=0, y=0, z=0}}
-     else let dx = r32 (b.projected.x - a.projected.x)
-          let dz = z_inv b.z - z_inv a.z
-          let dx_orig = b.world.x - a.world.x
-          let dy_orig = b.world.y - a.world.y
-          let dz_orig = z_inv b.world.z - z_inv a.world.z
-          let dy' = r32 dy
-          in {projected={x=dx / dy'},
-              z=dz / dy',
-              world={x=dx_orig / dy',
-                     y=dy_orig / dy',
-                     z=dz_orig / dy'}}
+     then {projected={x=0}, z=0, world={x=0, y=0, z=0}}
+     else let dy' = r32 dy
+          in {projected={x=r32 (b.projected.x - a.projected.x) / dy'},
+              z=(z_inv b.z - z_inv a.z) / dy',
+              world={x=(b.world.x - a.world.x) / dy',
+                     y=(b.world.y - a.world.y) / dy',
+                     z=(z_inv b.world.z - z_inv a.world.z) / dy'}}
 
 let neg_slope (s: slope): slope =
   {projected={x= -s.projected.x}, z= -s.z, world={x= -s.world.x, y= -s.world.y, z= -s.world.z}}
 
 let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
   {n_lines=r.projected.y - p.projected.y + 1,
-   p_y=p.projected.y,
-   y_subtracted_p_y={q=q.projected.y - p.projected.y, r=r.projected.y - p.projected.y},
-   p={projected={x=p.projected.x}, z=z_inv p.z, world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}},
-   r={projected={x=r.projected.x}, z=z_inv r.z, world={x=r.world.x, y=r.world.y, z=z_inv r.world.z}},
-   s1=dy p q,
-   s2=dy p r,
-   s3=neg_slope (dy q r)}
+   y=p.projected.y,
+   y_subtracted_p_y={q=q.projected.y - p.projected.y,
+                     r=r.projected.y - p.projected.y},
+   p={projected={x=p.projected.x},
+      z=z_inv p.z,
+      world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}},
+   r={projected={x=r.projected.x},
+      z=z_inv r.z,
+      world={x=r.world.x, y=r.world.y, z=z_inv r.world.z}},
+   s1=slope p q,
+   s2=slope p r,
+   s3=neg_slope (slope q r)}
 
 let get_line_in_triangle 'a
     ((t, aux): (triangle_slopes, a))
     (i: i64): (line, a) =
   let i = i32.i64 i
-  let y = t.p_y + i
+  let y = t.y + i
   let half (p: slope_point) (s1: slope) (s2: slope) (i': f32): (line, a) =
     let x1 = p.projected.x + t32 (f32.round (s1.projected.x * i'))
     let x2 = p.projected.x + t32 (f32.round (s2.projected.x * i'))
     let z1 = p.z + s1.z * i'
     let z2 = p.z + s2.z * i'
-    let x_orig1 = p.world.x + s1.world.x * i'
-    let x_orig2 = p.world.x + s2.world.x * i'
-    let y_orig1 = p.world.y + s1.world.y * i'
-    let y_orig2 = p.world.y + s2.world.y * i'
-    let z_orig1 = p.world.z + s1.world.z * i'
-    let z_orig2 = p.world.z + s2.world.z * i'
+    let world_x1 = p.world.x + s1.world.x * i'
+    let world_x2 = p.world.x + s2.world.x * i'
+    let world_y1 = p.world.y + s1.world.y * i'
+    let world_y2 = p.world.y + s2.world.y * i'
+    let world_z1 = p.world.z + s1.world.z * i'
+    let world_z2 = p.world.z + s2.world.z * i'
     let n_points = 1 + i32.abs (x2 - x1)
-    let fn = r32 n_points
-    let z = (z2 - z1) / fn
-    let x_orig = (x_orig2 - x_orig1) / fn
-    let y_orig = (y_orig2 - y_orig1) / fn
-    let z_orig = (z_orig2 - z_orig1) / fn
+    let n_points' = r32 n_points
+    let x = i32.sgn (x2 - x1)
+    let z = (z2 - z1) / n_points'
+    let world_x = (world_x2 - world_x1) / n_points'
+    let world_y = (world_y2 - world_y1) / n_points'
+    let world_z = (world_z2 - world_z1) / n_points'
     in ({n_points,
          y,
          leftmost = {projected={x=x1}, z=z1,
-                     world={x=x_orig1, y=y_orig1, z=z_orig1}},
-         step = {projected={x=i32.sgn (x2 - x1)}, z=z,
-                 world={x=x_orig, y=y_orig, z=z_orig}}},
+                     world={x=world_x1, y=world_y1, z=world_z1}},
+         step = {projected={x=x}, z=z,
+                 world={x=world_x, y=world_y, z=world_z}}},
          aux)
   in if i <= t.y_subtracted_p_y.q
      then half t.p t.s1 t.s2 (r32 i) -- upper half

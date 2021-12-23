@@ -14,7 +14,7 @@ type triangle_projected = (point_projected, point_projected, point_projected)
 type slope_point = base_component {x: i32}
 type slope = base_component {x: f32}
 type triangle_slopes = {n_lines: i32,
-                        p_y: i32,
+                        y: i32,
                         y_subtracted_p_y: {q: i32, r: i32},
                         p: slope_point,
                         r: slope_point,
