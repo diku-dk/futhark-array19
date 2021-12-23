@@ -129,12 +129,9 @@ let render_projected_triangles [n]
                                      world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}}, aux)) points'
   let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, -1)
 
-  let update ((a, aux_a): (point_projected_1d, i64)) ((b, aux_b): (point_projected_1d, i64)): (point_projected_1d, i64) =
-    if aux_a == -1 -- fixme superfluous?
-    then (b, aux_b)
-    else if aux_b == -1
-    then (a, aux_a)
-    else if (a.z >= 0 && a.z < b.z) || b.z < 0
+  let z_check ((a, aux_a): (point_projected_1d, i64)) ((b, aux_b): (point_projected_1d, i64))
+              : (point_projected_1d, i64) =
+    if (a.z >= 0 && a.z < b.z) || b.z < 0
     then (a, aux_a)
     else (b, aux_b)
 
@@ -161,6 +158,6 @@ let render_projected_triangles [n]
   let pixel_color = pixel_color_y
 
   let pixels = replicate (h * w) empty
-  let pixels' = reduce_by_index pixels update empty indices points''
+  let pixels' = reduce_by_index pixels z_check empty indices points''
   let pixels'' = map pixel_color pixels'
   in unflatten h w pixels''
