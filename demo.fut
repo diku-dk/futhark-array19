@@ -86,33 +86,18 @@ module lys: lys with text_content = text_content = {
 
   def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
     let move_camera op (camera: camera): camera =
-      let k = op 0 (5 * move_factor)
-      let diff = {x=0, y=0, z=k}
-      in camera with position = camera.position vec3.+ rotate_point_inv camera.orientation vec3.zero diff
+      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op 0 (5 * move_factor)}
+      in camera with position = camera.position vec3.+ v
 
-    let turn_camera_y op (camera: camera): camera =
-      -- camera with orientation.y = op camera.orientation.y (0.005 * move_factor)
+    let turn_camera (turn: vec3.vector) (camera: camera): camera =
       let q = euler_to_quaternion camera.orientation
-      let q_rotation = euler_to_quaternion {x=0, y=op 0 (0.005 * move_factor), z=0}
+      let q_rotation = euler_to_quaternion turn
       let q' = quaternion.(q * q_rotation)
       in camera with orientation = quaternion_to_euler q'
 
-    let turn_camera_z op (camera: camera): camera =
-      -- camera with orientation.z = op camera.orientation.z (0.005 * move_factor)
-      let q = euler_to_quaternion camera.orientation
-      let q_rotation = euler_to_quaternion {x=0, y=0, z=op 0 (0.005 * move_factor)}
-      let q' = quaternion.(q * q_rotation)
-      in camera with orientation = quaternion_to_euler q'
-
-    let turn_camera_x op (camera: camera): camera =
-      -- camera with orientation.x = op camera.orientation.x (0.005 * move_factor)
-      let q = euler_to_quaternion camera.orientation
-      let q_rotation = euler_to_quaternion {x=op 0 (0.005 * move_factor), y=0, z=0}
-      let q' = quaternion.(q * q_rotation)
-      in camera with orientation = quaternion_to_euler q'
-
-    let elevate_camera op (camera: camera): camera =
-      camera with position.y = op camera.position.y (5 * move_factor)
+    let turn_camera_y op = turn_camera {x=0, y=op 0 (0.005 * move_factor), z=0}
+    let turn_camera_z op = turn_camera {x=0, y=0, z=op 0 (0.005 * move_factor)}
+    let turn_camera_x op = turn_camera {x=op 0 (0.005 * move_factor), y=0, z=0}
 
     let pick dir kind (camera, changes) =
       dir (camera, changes) (\op -> kind (\k -> k op camera))
@@ -130,14 +115,13 @@ module lys: lys with text_content = text_content = {
     in id (camera, false)
        |> pick (minus_plus keys.down keys.up) (alt_kind turn_camera_x move_camera)
        |> pick (minus_plus keys.left keys.right) (alt_kind turn_camera_z turn_camera_y)
-       |> pick (minus_plus keys.pagedown keys.pageup) (just elevate_camera)
 
   def step td (s: state) =
     let move_factor = 200 * td * if s.keys.shift then 6 else 1
     let (camera', camera_changes) = step_camera move_factor s.keys s.camera
-    let draw_dist' = if s.keys.plus
+    let draw_dist' = if s.keys.pageup
                      then s.draw_dist + 5 * move_factor
-                     else if s.keys.minus
+                     else if s.keys.pagedown
                      then s.draw_dist - 5 * move_factor
                      else s.draw_dist
    in s with camera = camera'
@@ -172,14 +156,6 @@ module lys: lys with text_content = text_content = {
     then keys with pagedown = pressed
     else if k == SDLK_PAGEUP
     then keys with pageup = pressed
-    else if k == SDLK_MINUS
-    then keys with minus = pressed
-    else if k == SDLK_KP_MINUS
-    then keys with minus = pressed
-    else if k == SDLK_PLUS
-    then keys with plus = pressed
-    else if k == SDLK_KP_PLUS
-    then keys with plus = pressed
     else keys
 
   def event (e: event) (s: state) =

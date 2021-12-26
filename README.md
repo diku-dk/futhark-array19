@@ -24,10 +24,11 @@ associated header files.
 Controls:
 
   + Up/Down: Move forwards/backwards
+  + Alt+Up/Down: Turn upwards/downwards
   + Left/Right: Turn left/right
-  + PageUp/PageDown: Move upwards/downwards
-  + Shift: Move and turn faster
-  + Plus/Minus: Increase/decrease draw distance
+  + Alt+Left/Right: Turn downwards left/right
+  + Shift+: Move and turn faster
+  + PageUp/PageDown: Increase/decrease draw distance
   + F1: Toggle text
   + ESC: Exit
 
