@@ -168,9 +168,3 @@ module lys: lys with text_content = text_content = {
 
   def grab_mouse = false
 }
-
--- ==
--- entry: benchmark
--- compiled input { 800 600 }
-entry benchmark (w: i64) (h: i64) =
-  lys.init 0 h w |> lys.render
