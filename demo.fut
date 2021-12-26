@@ -84,21 +84,21 @@ module lys: lys with text_content = text_content = {
     let (triangles_slopes, colours) = unzip s.triangles_in_view
     in render_projected_triangles s.h s.w triangles_slopes colours
 
+  def move_camera (move_factor: f32) op (camera: camera): camera =
+    let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (f32.i32 0) (5 * move_factor)}
+    in camera with position = camera.position vec3.+ v
+
+  def turn_camera (turn: vec3.vector) (camera: camera): camera =
+    let q = euler_to_quaternion camera.orientation
+    let q_rotation = euler_to_quaternion turn
+    let q' = quaternion.(q * q_rotation)
+    in camera with orientation = quaternion_to_euler q'
+
+  def turn_camera_y (move_factor: f32) op = turn_camera {x=0, y=op (f32.i32 0) (0.005 * move_factor), z=0}
+  def turn_camera_z (move_factor: f32) op = turn_camera {x=0, y=0, z=op (f32.i32 0) (0.005 * move_factor)}
+  def turn_camera_x (move_factor: f32) op = turn_camera {x=op (f32.i32 0) (0.005 * move_factor), y=0, z=0}
+
   def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
-    let move_camera op (camera: camera): camera =
-      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op 0 (5 * move_factor)}
-      in camera with position = camera.position vec3.+ v
-
-    let turn_camera (turn: vec3.vector) (camera: camera): camera =
-      let q = euler_to_quaternion camera.orientation
-      let q_rotation = euler_to_quaternion turn
-      let q' = quaternion.(q * q_rotation)
-      in camera with orientation = quaternion_to_euler q'
-
-    let turn_camera_y op = turn_camera {x=0, y=op 0 (0.005 * move_factor), z=0}
-    let turn_camera_z op = turn_camera {x=0, y=0, z=op 0 (0.005 * move_factor)}
-    let turn_camera_x op = turn_camera {x=op 0 (0.005 * move_factor), y=0, z=0}
-
     let pick dir kind (camera, changes) =
       dir (camera, changes) (\op -> kind (\k -> k op camera))
     let changed f op = (f op, true)
@@ -113,11 +113,13 @@ module lys: lys with text_content = text_content = {
     let just k f = f k
 
     in id (camera, false)
-       |> pick (minus_plus keys.down keys.up) (alt_kind turn_camera_x move_camera)
-       |> pick (minus_plus keys.left keys.right) (alt_kind turn_camera_z turn_camera_y)
+       |> pick (minus_plus keys.down keys.up) (alt_kind (turn_camera_x move_factor) (move_camera move_factor))
+       |> pick (minus_plus keys.left keys.right) (alt_kind (turn_camera_z move_factor) (turn_camera_y move_factor))
+
+  def get_move_factor td (s: state): f32 = 200 * td * if s.keys.shift then 6 else 1
 
   def step td (s: state) =
-    let move_factor = 200 * td * if s.keys.shift then 6 else 1
+    let move_factor = get_move_factor td s
     let (camera', camera_changes) = step_camera move_factor s.keys s.camera
     let draw_dist' = if s.keys.pageup
                      then s.draw_dist + 5 * move_factor
@@ -127,7 +129,7 @@ module lys: lys with text_content = text_content = {
    in s with camera = camera'
         with draw_dist = draw_dist'
         with is_still = !camera_changes
-        with triangles_in_view = if camera_changes || !s.is_still
+        with triangles_in_view = if true -- camera_changes || !s.is_still -- FIXME
                                  then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
                                                                 camera' s.triangles_coloured
                                  else s.triangles_in_view
@@ -162,9 +164,12 @@ module lys: lys with text_content = text_content = {
     match e
     case #step td -> step td s
     case #wheel _ -> s
-    case #mouse _ -> s
+    case #mouse {buttons=_, x, y} ->
+      let camera' = turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
+                    |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
+      in s with camera = camera'
     case #keydown {key} -> s with keys = keychange key true s.keys
     case #keyup {key} -> s with keys = keychange key false s.keys
 
-  def grab_mouse = false
+  def grab_mouse = true
 }
