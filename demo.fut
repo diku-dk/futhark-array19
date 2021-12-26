@@ -2,6 +2,42 @@ import "lib/github.com/diku-dk/lys/lys"
 import "types"
 import "raster3d"
 import "terrain"
+import "quaternion"
+
+module quaternion = mk_quaternion f32
+
+-- x roll/bank
+-- y pitch/heading
+-- z yaw/attitude
+
+def euler_to_quaternion ({x, y, z}: vec3.vector): quaternion.quaternion =
+  let c1 = f32.cos (y / 2)
+  let s1 = f32.sin (y / 2)
+  let c2 = f32.cos (z / 2)
+  let s2 = f32.sin (z / 2)
+  let c3 = f32.cos (x / 2)
+  let s3 = f32.sin (x / 2)
+  let a = c1 * c2 * c3 - s1 * s2 * s3
+  let b = s1 * s2 * c3 + c1 * c2 * s3
+  let c = s1 * c2 * c3 + c1 * s2 * s3
+  let d = c1 * s2 * c3 - s1 * c2 * s3
+  in quaternion.mk a b c d
+
+-- FIXME: edge cases okay?
+def quaternion_to_euler (q: quaternion.quaternion): vec3.vector =
+  let sqa = q.a * q.a
+  let sqb = q.b * q.b
+  let sqc = q.c * q.c
+  let sqd = q.d * q.d
+  let unit = sqa + sqb + sqc + sqd
+  let test = q.b * q.c + q.d * q.a
+  in if test > 0.499 * unit -- singularity at north pole
+     then {x=0, y=2 * f32.atan2 q.b q.a, z=f32.pi / 2}
+     else if test < -0.499 * unit -- singularity at south pole
+     then {x=0, y= -2 * f32.atan2 q.b q.a, z= -f32.pi / 2}
+     else {x=f32.atan2 (2 * q.b * q.a - 2 * q.c * q.d) (-sqb + sqc - sqd + sqa),
+           y=f32.atan2 (2 * q.c * q.a - 2 * q.b * q.d) (sqb - sqc - sqd + sqa),
+           z=f32.asin (2 * test / unit)}
 
 type keys_state = {shift: bool, alt: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, minus: bool, plus: bool}
@@ -50,17 +86,30 @@ module lys: lys with text_content = text_content = {
 
   def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
     let move_camera op (camera: camera): camera =
-      let point = camera.position with z = op camera.position.z (5 * move_factor)
-      in camera with position = rotate_point camera.orientation camera.position point
+      let k = op 0 (5 * move_factor)
+      let diff = {x=0, y=0, z=k}
+      in camera with position = camera.position vec3.+ rotate_point_inv camera.orientation vec3.zero diff
 
     let turn_camera_y op (camera: camera): camera =
-      camera with orientation.y = op camera.orientation.y (0.005 * move_factor)
+      -- camera with orientation.y = op camera.orientation.y (0.005 * move_factor)
+      let q = euler_to_quaternion camera.orientation
+      let q_rotation = euler_to_quaternion {x=0, y=op 0 (0.005 * move_factor), z=0}
+      let q' = quaternion.(q * q_rotation)
+      in camera with orientation = quaternion_to_euler q'
 
     let turn_camera_z op (camera: camera): camera =
-      camera with orientation.z = op camera.orientation.z (0.005 * move_factor)
+      -- camera with orientation.z = op camera.orientation.z (0.005 * move_factor)
+      let q = euler_to_quaternion camera.orientation
+      let q_rotation = euler_to_quaternion {x=0, y=0, z=op 0 (0.005 * move_factor)}
+      let q' = quaternion.(q * q_rotation)
+      in camera with orientation = quaternion_to_euler q'
 
     let turn_camera_x op (camera: camera): camera =
-      camera with orientation.x = op camera.orientation.x (0.005 * move_factor)
+      -- camera with orientation.x = op camera.orientation.x (0.005 * move_factor)
+      let q = euler_to_quaternion camera.orientation
+      let q_rotation = euler_to_quaternion {x=op 0 (0.005 * move_factor), y=0, z=0}
+      let q' = quaternion.(q * q_rotation)
+      in camera with orientation = quaternion_to_euler q'
 
     let elevate_camera op (camera: camera): camera =
       camera with position.y = op camera.position.y (5 * move_factor)

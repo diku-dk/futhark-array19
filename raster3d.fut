@@ -23,27 +23,55 @@ def rotate_point
   (origo: vec3.vector)
   (p: vec3.vector)
   : vec3.vector =
-  let (x0, y0, z0) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
+  let (x, y, z) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
+
+  let (sin_x, cos_x) = (f32.sin angle.x, f32.cos angle.x)
+  let (sin_y, cos_y) = (f32.sin angle.y, f32.cos angle.y)
+  let (sin_z, cos_z) = (f32.sin angle.z, f32.cos angle.z)
+
+  -- Y axis.
+  let (x, y, z) = (z * sin_y + x * cos_y,
+                   y,
+                   z * cos_y - x * sin_y)
+  -- Z axis.
+  let (x, y, z) = (x * cos_z - y * sin_z,
+                   x * sin_z + y * cos_z,
+                   z)
+  -- X axis.
+  let (x, y, z) = (x,
+                   y * cos_x - z * sin_x,
+                   y * sin_x + z * cos_x)
+
+  let (x, y, z) = (origo.x + x, origo.y + y, origo.z + z)
+  in {x, y, z}
+
+-- FIXME: Reduce code duplication.
+def rotate_point_inv
+  (angle: vec3.vector)
+  (origo: vec3.vector)
+  (p: vec3.vector)
+  : vec3.vector =
+  let (x, y, z) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
 
   let (sin_x, cos_x) = (f32.sin angle.x, f32.cos angle.x)
   let (sin_y, cos_y) = (f32.sin angle.y, f32.cos angle.y)
   let (sin_z, cos_z) = (f32.sin angle.z, f32.cos angle.z)
 
   -- X axis.
-  let (x1, y1, z1) = (x0,
-                      y0 * cos_x - z0 * sin_x,
-                      y0 * sin_x + z0 * cos_x)
-  -- Y axis.
-  let (x2, y2, z2) = (z1 * sin_y + x1 * cos_y,
-                      y1,
-                      z1 * cos_y - x1 * sin_y)
+  let (x, y, z) = (x,
+                   y * cos_x - z * sin_x,
+                   y * sin_x + z * cos_x)
   -- Z axis.
-  let (x3, y3, z3) = (x2 * cos_z - y2 * sin_z,
-                      x2 * sin_z + y2 * cos_z,
-                      z2)
+  let (x, y, z) = (x * cos_z - y * sin_z,
+                   x * sin_z + y * cos_z,
+                   z)
+  -- Y axis.
+  let (x, y, z) = (z * sin_y + x * cos_y,
+                   y,
+                   z * cos_y - x * sin_y)
 
-  let (x', y', z') = (origo.x + x3, origo.y + y3, origo.z + z3)
-  in {x=x', y=y', z=z'}
+  let (x, y, z) = (origo.x + x, origo.y + y, origo.z + z)
+  in {x, y, z}
 
 -- | Translate and rotate all points relative to the camera.
 def camera_normalize_triangle
