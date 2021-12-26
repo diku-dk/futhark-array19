@@ -165,7 +165,9 @@ module lys: lys with text_content = text_content = {
     case #step td -> step td s
     case #wheel _ -> s
     case #mouse {buttons=_, x, y} ->
-      let camera' = turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
+      let camera' = (if s.keys.alt
+                     then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
+                     else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
                     |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
       in s with camera = camera'
     case #keydown {key} -> s with keys = keychange key true s.keys
