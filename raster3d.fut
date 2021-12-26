@@ -159,6 +159,7 @@ let render_projected_triangles [n]
   let pixel_color = pixel_color_y
 
   let pixels = replicate (h * w) empty
+  -- FIXME: Use reduce_by_index_2d instead.
   let pixels' = reduce_by_index pixels z_check empty indices points''
   let pixels'' = map pixel_color pixels'
   in unflatten h w pixels''
