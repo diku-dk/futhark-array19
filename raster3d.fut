@@ -3,22 +3,22 @@ import "types"
 import "scanline"
 import "hsv"
 
-let bubble_point
+def bubble_point
     (a: point_projected)
     (b: point_projected): (point_projected, point_projected) =
   if b.projected.y < a.projected.y then (b, a) else (a, b)
 
-let normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
+def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
   let (p, q) = bubble_point p q
   let (q, r) = bubble_point q r
   let (p, q) = bubble_point p q
   in (p, q, r)
 
-let prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
+def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
   map normalize_triangle_points triangles
   |> map (\triangle -> triangle_slopes triangle)
 
-let rotate_point
+def rotate_point
   (angle: vec3.vector)
   (origo: vec3.vector)
   (p: vec3.vector)
@@ -46,7 +46,7 @@ let rotate_point
   in {x=x', y=y', z=z'}
 
 -- | Translate and rotate all points relative to the camera.
-let camera_normalize_triangle
+def camera_normalize_triangle
     ({position=pc, orientation=po}: camera)
     ((p, q, r): triangle): triangle =
 
@@ -58,7 +58,7 @@ let camera_normalize_triangle
       camera_normalize_point q,
       camera_normalize_point r)
 
-let project_triangle
+def project_triangle
     (h: i64) (w: i64)
     (view_dist: f32)
     (camera: camera)
@@ -78,7 +78,7 @@ let project_triangle
       {projected=project_point normalized.2, world=world.2, z=normalized.2.z})
 
 -- | Project triangles currently visible from the camera.
-let project_triangles_in_view
+def project_triangles_in_view
     (h: i64)
     (w: i64)
     (view_dist: f32)
@@ -112,7 +112,7 @@ let project_triangles_in_view
   in zip triangles_slopes colours'
 
 -- | Render projected triangles using expand and reduce_by_index.
-let render_projected_triangles [n]
+def render_projected_triangles [n]
     (h: i64)
     (w: i64)
     (triangles_prepared: [n]triangle_slopes)

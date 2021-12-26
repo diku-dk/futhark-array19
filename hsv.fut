@@ -2,10 +2,10 @@ import "lib/github.com/athas/matte/colour"
 
 type hsv = (f32, f32, f32)
 
-let fmod (a: f32) (m: f32): f32 =
+def fmod (a: f32) (m: f32): f32 =
   a - r32 (t32 (a / m)) * m -- FIXME: Replace usage
 
-let hsv_to_rgb ((h, s, v): hsv): argb.colour =
+def hsv_to_rgb ((h, s, v): hsv): argb.colour =
   let c = v * s
   let h' = h / 60.0
   let x = c * (1.0 - f32.abs (fmod h' 2.0 - 1.0))

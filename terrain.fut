@@ -7,7 +7,7 @@ module rnge = xorshift128plus
 module dist = uniform_real_distribution f32 rnge
 
 
-let hsv_average ((h0, s0, v0): hsv) ((h1, s1, v1): hsv): hsv =
+def hsv_average ((h0, s0, v0): hsv) ((h1, s1, v1): hsv): hsv =
   let (h0, h1) = if h0 < h1 then (h0, h1) else (h1, h0)
   let diff_a = h1 - h0
   let diff_b = h0 + 360.0 - h1
@@ -19,7 +19,7 @@ let hsv_average ((h0, s0, v0): hsv) ((h1, s1, v1): hsv): hsv =
   in (h, s, v)
 
 
-let mix (c1: argb.colour) (c2: argb.colour): argb.colour =
+def mix (c1: argb.colour) (c2: argb.colour): argb.colour =
   let (r1,g1,b1,a1) = argb.to_rgba c1
   let (r2,g2,b2,a2) = argb.to_rgba c2
 
@@ -28,12 +28,12 @@ let mix (c1: argb.colour) (c2: argb.colour): argb.colour =
                     ((b1 + b2) / 2)
                     ((a1 + a2) / 2)
 
-let mix8 (a: hsv) (b: hsv) (c: hsv) (d: hsv) (e: hsv) (f: hsv) (g: hsv) (h: hsv): hsv =
+def mix8 (a: hsv) (b: hsv) (c: hsv) (d: hsv) (e: hsv) (f: hsv) (g: hsv) (h: hsv): hsv =
   let m = hsv_average
   in m (m (m a b) (m c d)) (m (m e f) (m g h))
 
 -- | A very simple terrain generator.
-let generate_terrain
+def generate_terrain
   (depth: i64)
   (width: i64)
   (size: i64)

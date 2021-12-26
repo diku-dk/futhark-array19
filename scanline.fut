@@ -4,10 +4,10 @@ import "types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
-let z_inv (z: f32): f32 =
+def z_inv (z: f32): f32 =
   1 / z
 
-let slope (a: point_projected) (b: point_projected): slope =
+def slope (a: point_projected) (b: point_projected): slope =
   let dy = b.projected.y - a.projected.y
   in if dy == 0
      then {projected={x=0}, z=0, world=vec3.zero}
@@ -18,10 +18,10 @@ let slope (a: point_projected) (b: point_projected): slope =
                      y=(b.world.y - a.world.y) / dy',
                      z=(z_inv b.world.z - z_inv a.world.z) / dy'}}
 
-let neg_slope (s: slope): slope =
+def neg_slope (s: slope): slope =
   {projected={x= -s.projected.x}, z= -s.z, world={x= -s.world.x, y= -s.world.y, z= -s.world.z}}
 
-let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
+def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
   {n_lines=r.projected.y - p.projected.y + 1,
    y=p.projected.y,
    y_subtracted_p_y={q=q.projected.y - p.projected.y,
@@ -36,7 +36,7 @@ let triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
    s2=slope p r,
    s3=neg_slope (slope q r)}
 
-let get_line_in_triangle 'a
+def get_line_in_triangle 'a
     ((t, aux): (triangle_slopes, a))
     (i: i64): (line, a) =
   let i = i32.i64 i
@@ -70,15 +70,15 @@ let get_line_in_triangle 'a
      then half t.p t.s1 t.s2 (r32 i) -- upper half
      else half t.r (neg_slope t.s2) t.s3 (r32 (t.y_subtracted_p_y.r - i)) -- lower half
 
-let lines_of_triangles 'a [n]
+def lines_of_triangles 'a [n]
     (triangles: [n]triangle_slopes)
     (aux: [n]a): [](line, a) =
   expand (\(t, _) -> i64.i32 t.n_lines) get_line_in_triangle (zip triangles aux)
 
-let points_in_line 'a ((line, _): (line, a)): i64 =
+def points_in_line 'a ((line, _): (line, a)): i64 =
   i64.i32 line.n_points
 
-let get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected, a) =
+def get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected, a) =
   let i' = f32.i64 i
   in ({projected={x=l.leftmost.projected.x + l.step.projected.x * i32.i64 i,
                   y=l.y},
@@ -88,5 +88,5 @@ let get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected, a) =
               z=l.leftmost.world.z + l.step.world.z * i'}},
    aux)
 
-let points_of_lines 'a (lines: [](line, a)): [](point_projected, a) =
+def points_of_lines 'a (lines: [](line, a)): [](point_projected, a) =
   expand points_in_line get_point_in_line lines

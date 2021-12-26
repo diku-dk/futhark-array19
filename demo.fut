@@ -19,17 +19,17 @@ module lys: lys with text_content = text_content = {
 
   type text_content = text_content
 
-  let text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f"
+  def text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f"
 
-  let text_content (fps: f32) (s: state): text_content =
+  def text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
      s.camera.position.x, s.camera.position.y, s.camera.position.z,
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
      s.view_dist, s.draw_dist)
 
-  let text_colour = const argb.blue
+  def text_colour = const argb.blue
 
-  let init (terrain_seed: u32) (h: i64) (w: i64): state =
+  def init (terrain_seed: u32) (h: i64) (w: i64): state =
     let view_dist = 600
     let draw_dist = 100000
     let camera = {position={x=150000, y= -4000, z=100000},
@@ -44,11 +44,11 @@ module lys: lys with text_content = text_content = {
         keys={shift=false, alt=false, down=false, up=false, left=false, right=false,
               pagedown=false, pageup=false, minus=false, plus=false}}
 
-  let render (s: state) =
+  def render (s: state) =
     let (triangles_slopes, colours) = unzip s.triangles_in_view
     in render_projected_triangles s.h s.w triangles_slopes colours
 
-  let step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
+  def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
     let move_camera op (camera: camera): camera =
       let point = camera.position with z = op camera.position.z (5 * move_factor)
       in camera with position = rotate_point camera.orientation camera.position point
@@ -83,7 +83,7 @@ module lys: lys with text_content = text_content = {
        |> pick (minus_plus keys.left keys.right) (alt_kind turn_camera_z turn_camera_y)
        |> pick (minus_plus keys.pagedown keys.pageup) (just elevate_camera)
 
-  let step td (s: state) =
+  def step td (s: state) =
     let move_factor = 200 * td * if s.keys.shift then 6 else 1
     let (camera', camera_changes) = step_camera move_factor s.keys s.camera
     let draw_dist' = if s.keys.plus
@@ -99,10 +99,10 @@ module lys: lys with text_content = text_content = {
                                                                 camera' s.triangles_coloured
                                  else s.triangles_in_view
 
-  let resize (h: i64) (w: i64) (s: state) =
+  def resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
 
-  let keychange k pressed (keys: keys_state): keys_state =
+  def keychange k pressed (keys: keys_state): keys_state =
     if k == SDLK_LSHIFT
     then keys with shift = pressed
     else if k == SDLK_RSHIFT
@@ -133,7 +133,7 @@ module lys: lys with text_content = text_content = {
     then keys with plus = pressed
     else keys
 
-  let event (e: event) (s: state) =
+  def event (e: event) (s: state) =
     match e
     case #step td -> step td s
     case #wheel _ -> s
@@ -141,7 +141,7 @@ module lys: lys with text_content = text_content = {
     case #keydown {key} -> s with keys = keychange key true s.keys
     case #keyup {key} -> s with keys = keychange key false s.keys
 
-  let grab_mouse = false
+  def grab_mouse = false
 }
 
 -- ==
