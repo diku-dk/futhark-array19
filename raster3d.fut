@@ -129,7 +129,8 @@ let render_projected_triangles [n]
                                      world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}}, aux)) points'
   let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, -1)
 
-  let z_check ((a, aux_a): (point_projected_1d, i64)) ((b, aux_b): (point_projected_1d, i64))
+  let z_check ((a, aux_a): (point_projected_1d, i64))
+              ((b, aux_b): (point_projected_1d, i64))
               : (point_projected_1d, i64) =
     if (a.z >= 0 && a.z < b.z) || b.z < 0
     then (a, aux_a)
