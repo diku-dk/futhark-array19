@@ -18,60 +18,44 @@ def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes
   map normalize_triangle_points triangles
   |> map (\triangle -> triangle_slopes triangle)
 
-def rotate_point
-  (angle: vec3.vector)
-  (origo: vec3.vector)
-  (p: vec3.vector)
-  : vec3.vector =
-  let (x, y, z) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
+def rotate_x ((sin, cos): (vec3.vector, vec3.vector))
+             ({x, y, z}: vec3.vector): vec3.vector =
+  {x,
+   y=y * cos.x - z * sin.x,
+   z=y * sin.x + z * cos.x}
 
-  let (sin_x, cos_x) = (f32.sin angle.x, f32.cos angle.x)
-  let (sin_y, cos_y) = (f32.sin angle.y, f32.cos angle.y)
-  let (sin_z, cos_z) = (f32.sin angle.z, f32.cos angle.z)
+def rotate_y ((sin, cos): (vec3.vector, vec3.vector))
+             ({x, y, z}: vec3.vector): vec3.vector =
+  {x=z * sin.y + x * cos.y,
+   y,
+   z=z * cos.y - x * sin.y}
 
-  -- Y axis.
-  let (x, y, z) = (z * sin_y + x * cos_y,
-                   y,
-                   z * cos_y - x * sin_y)
-  -- Z axis.
-  let (x, y, z) = (x * cos_z - y * sin_z,
-                   x * sin_z + y * cos_z,
-                   z)
-  -- X axis.
-  let (x, y, z) = (x,
-                   y * cos_x - z * sin_x,
-                   y * sin_x + z * cos_x)
+def rotate_z ((sin, cos): (vec3.vector, vec3.vector))
+             ({x, y, z}: vec3.vector): vec3.vector =
+  {x=x * cos.z - y * sin.z,
+   y=x * sin.z + y * cos.z,
+   z}
 
-  let (x, y, z) = (origo.x + x, origo.y + y, origo.z + z)
-  in {x, y, z}
+def sin_cos (angle: vec3.vector): (vec3.vector, vec3.vector) =
+  let sin = {x=f32.sin angle.x, y=f32.sin angle.y, z=f32.sin angle.z}
+  let cos = {x=f32.cos angle.x, y=f32.cos angle.y, z=f32.cos angle.z}
+  in (sin, cos)
 
--- FIXME: Reduce code duplication.
-def rotate_point_inv
-  (angle: vec3.vector)
-  (origo: vec3.vector)
-  (p: vec3.vector)
-  : vec3.vector =
-  let (x, y, z) = (p.x - origo.x, p.y - origo.y, p.z - origo.z)
+def rotate_point_base (angle: vec3.vector) (origo: vec3.vector)
+                      (rotate: vec3.vector -> vec3.vector) (p: vec3.vector): vec3.vector =
+  id {x=p.x - origo.x, y=p.y - origo.y, z=p.z - origo.z}
+  |> rotate
+  |> (origo vec3.+)
 
-  let (sin_x, cos_x) = (f32.sin angle.x, f32.cos angle.x)
-  let (sin_y, cos_y) = (f32.sin angle.y, f32.cos angle.y)
-  let (sin_z, cos_z) = (f32.sin angle.z, f32.cos angle.z)
+def rotate_point (angle: vec3.vector) (origo: vec3.vector)
+                 (p: vec3.vector): vec3.vector =
+  let trig = sin_cos angle
+  in rotate_point_base angle origo (rotate_y trig >-> rotate_z trig >-> rotate_x trig) p
 
-  -- X axis.
-  let (x, y, z) = (x,
-                   y * cos_x - z * sin_x,
-                   y * sin_x + z * cos_x)
-  -- Z axis.
-  let (x, y, z) = (x * cos_z - y * sin_z,
-                   x * sin_z + y * cos_z,
-                   z)
-  -- Y axis.
-  let (x, y, z) = (z * sin_y + x * cos_y,
-                   y,
-                   z * cos_y - x * sin_y)
-
-  let (x, y, z) = (origo.x + x, origo.y + y, origo.z + z)
-  in {x, y, z}
+def rotate_point_inv (angle: vec3.vector) (origo: vec3.vector)
+                     (p: vec3.vector): vec3.vector =
+  let trig = sin_cos angle
+  in rotate_point_base angle origo (rotate_x trig >-> rotate_z trig >-> rotate_y trig) p
 
 -- | Translate and rotate all points relative to the camera.
 def camera_normalize_triangle
