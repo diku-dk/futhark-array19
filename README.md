@@ -21,16 +21,26 @@ Run `futhark pkg sync` once and then `make && ./demo` for an interactive
 terrain explorer.  Requires SDL2 and SDL2-ttf C libraries with
 associated header files.
 
-Controls:
+Base controls:
+
+  + Shift+other action: Move or turn faster
+  + PageUp/PageDown: Increase/decrease draw distance
+  + F1: Toggle text
+  + ESC: Exit (press once to exit the mouse grabbing, twice to exit the program)
+
+Mouse controls for navigation:
+
+  + Mouse: Move around
+  + Ctrl+mouse: Move along the y axis instead of the z axis when moving
+    the mouse horizontally
+  + Space: Move forward
+
+Keyboard controls for navigation:
 
   + Up/Down: Move forwards/backwards
   + Alt+Up/Down: Turn upwards/downwards
   + Left/Right: Turn left/right
   + Alt+Left/Right: Turn downwards left/right
-  + Shift+: Move and turn faster
-  + PageUp/PageDown: Increase/decrease draw distance
-  + F1: Toggle text
-  + ESC: Exit
 
 
 ## Notes

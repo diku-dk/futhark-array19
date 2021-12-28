@@ -39,8 +39,10 @@ def quaternion_to_euler (q: quaternion.quaternion): vec3.vector =
            y=f32.atan2 (2 * q.c * q.a - 2 * q.b * q.d) (sqb - sqc - sqd + sqa),
            z=f32.asin (2 * test / unit)}
 
-type keys_state = {shift: bool, alt: bool, down: bool, up: bool, left: bool, right: bool,
-                   pagedown: bool, pageup: bool, minus: bool, plus: bool}
+def when pred action orig = if pred then action orig else orig
+
+type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
+                   pagedown: bool, pageup: bool, space: bool}
 
 type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32)
 module lys: lys with text_content = text_content = {
@@ -77,8 +79,8 @@ module lys: lys with text_content = text_content = {
     in {w, h,
         view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
-        keys={shift=false, alt=false, down=false, up=false, left=false, right=false,
-              pagedown=false, pageup=false, minus=false, plus=false}}
+        keys={shift=false, alt=false, ctrl=false, down=false, up=false, left=false, right=false,
+              pagedown=false, pageup=false, space=false}}
 
   def render (s: state) =
     let (triangles_slopes, colours) = unzip s.triangles_in_view
@@ -115,6 +117,7 @@ module lys: lys with text_content = text_content = {
     in id (camera, false)
        |> pick (minus_plus keys.down keys.up) (alt_kind (turn_camera_x move_factor) (move_camera move_factor))
        |> pick (minus_plus keys.left keys.right) (alt_kind (turn_camera_z move_factor) (turn_camera_y move_factor))
+       |> when keys.space (\(camera, _) -> (move_camera move_factor (+) camera, true))
 
   def get_move_factor td (s: state): f32 = 200 * td * if s.keys.shift then 6 else 1
 
@@ -126,13 +129,13 @@ module lys: lys with text_content = text_content = {
                      else if s.keys.pagedown
                      then s.draw_dist - 5 * move_factor
                      else s.draw_dist
-   in s with camera = camera'
-        with draw_dist = draw_dist'
-        with is_still = !camera_changes
-        with triangles_in_view = if true -- camera_changes || !s.is_still -- FIXME
-                                 then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
-                                                                camera' s.triangles_coloured
-                                 else s.triangles_in_view
+    in s with camera = camera'
+         with draw_dist = draw_dist'
+         with is_still = !camera_changes
+         with triangles_in_view = if true -- camera_changes || !s.is_still -- FIXME
+                                  then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
+                                                                 camera' s.triangles_coloured
+                                  else s.triangles_in_view
 
   def resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
@@ -146,6 +149,10 @@ module lys: lys with text_content = text_content = {
     then keys with alt = pressed
     else if k == SDLK_RALT
     then keys with alt = pressed
+    else if k == SDLK_LCTRL
+    then keys with ctrl = pressed
+    else if k == SDLK_RCTRL
+    then keys with ctrl = pressed
     else if k == SDLK_DOWN
     then keys with down = pressed
     else if k == SDLK_UP
@@ -158,18 +165,19 @@ module lys: lys with text_content = text_content = {
     then keys with pagedown = pressed
     else if k == SDLK_PAGEUP
     then keys with pageup = pressed
+    else if k == SDLK_SPACE
+    then keys with space = pressed
     else keys
 
   def event (e: event) (s: state) =
     match e
     case #step td -> step td s
     case #wheel _ -> s
-    case #mouse {buttons=_, x, y} ->
-      let camera' = (if s.keys.alt
-                     then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
-                     else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
-                    |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
-      in s with camera = camera'
+    case #mouse {buttons, x, y} ->
+      s with camera = (if s.keys.ctrl
+                          then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
+                          else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
+                         |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
     case #keydown {key} -> s with keys = keychange key true s.keys
     case #keyup {key} -> s with keys = keychange key false s.keys
 
