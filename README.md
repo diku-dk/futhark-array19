@@ -1,4 +1,4 @@
-# raster3d
+# raster3d [![CI](https://github.com/nqpz/raster3d/workflows/CI/badge.svg)](https://github.com/nqpz/raster3d/actions)
 
 ![Screenshot](screenshot.png)
 
