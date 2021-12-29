@@ -4,13 +4,18 @@ import "raster3d"
 import "terrain"
 import "quaternion"
 import "quaternion_euler"
+import "hsv"
 
 type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, space: bool}
 
 type navigation = #mouse | #keyboard
 
-type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, i32)
+type pixel_color_approach = #by_triangle
+                          | #by_depth
+                          | #by_height
+
+type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, i32, i32)
 module lys: lys with text_content = text_content = {
   type~ state = {h: i64, w: i64,
                  view_dist: f32, -- another way of expressing the FOV
@@ -20,7 +25,8 @@ module lys: lys with text_content = text_content = {
                  triangles_coloured: [](triangle_coloured argb.colour),
                  triangles_in_view: [](triangle_slopes, argb.colour),
                  keys: keys_state,
-                 navigation: navigation}
+                 navigation: navigation,
+                 pixel_color_approach: pixel_color_approach}
 
   type text_content = text_content
 
@@ -31,7 +37,8 @@ module lys: lys with text_content = text_content = {
                        ++ "Orientation: (%.1f, %.1f, %.1f)\n"
                        ++ "View distance (FOV): %.1f\n"
                        ++ "Draw distance: %.1f\n"
-                       ++ "Navigation: %[Mouse|Keyboard]"
+                       ++ "Navigation: %[Mouse|Keyboard]\n"
+                       ++ "Pixel color: By %[triangle|depth|height]"
 
   def text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
@@ -40,7 +47,11 @@ module lys: lys with text_content = text_content = {
      s.view_dist, s.draw_dist,
      (match s.navigation
       case #mouse -> 0
-      case #keyboard -> 1))
+      case #keyboard -> 1),
+     (match s.pixel_color_approach
+      case #by_triangle -> 0
+      case #by_depth -> 1
+      case #by_height -> 2))
 
   def text_colour = const argb.black
 
@@ -60,14 +71,60 @@ module lys: lys with text_content = text_content = {
         triangles_coloured, triangles_in_view,
         keys={shift=false, alt=false, ctrl=false, down=false, up=false, left=false, right=false,
               pagedown=false, pageup=false, space=false},
-       navigation=#mouse}
+       navigation=#mouse, pixel_color_approach=#by_triangle}
 
   def resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
 
+  module pixel_color = {
+    def pixel_depth (z: f32): f32 =
+      if z < 0
+      then 1
+      else z / 100000 -- FIXME: don't use constants
+
+    module by_triangle = {
+      type aux = argb.colour
+      def empty_aux = argb.white
+      def triangles_aux colors = colors
+      def pixel_color ((_p, color): (point_projected_1d, argb.colour)): argb.colour = color
+    }
+
+    module by_depth = {
+      type aux = ()
+      def empty_aux = ()
+      def triangles_aux [n] (_: [n]triangle_slopes): [n]() = replicate n ()
+      def pixel_color ((p, _aux): (point_projected_1d, ())): argb.colour =
+        argb.gray (pixel_depth p.z)
+    }
+
+    module by_height = {
+      type aux = ()
+      def empty_aux = ()
+      def triangles_aux [n] (_: [n]triangle_slopes): [n]() = replicate n ()
+      def pixel_color ((p, _aux): (point_projected_1d, ())): argb.colour =
+        let f = (p.world.y + 4000) / 8000 -- FIXME: don't use constants
+        in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth p.z, 0.5)
+    }
+  }
+
   def render (s: state) =
     let (triangles_slopes, colours) = unzip s.triangles_in_view
-    in render_projected_triangles s.h s.w triangles_slopes colours
+    in match s.pixel_color_approach
+       case #by_triangle -> render_projected_triangles
+                            s.h s.w triangles_slopes
+                            pixel_color.by_triangle.pixel_color
+                            (pixel_color.by_triangle.triangles_aux colours)
+                            pixel_color.by_triangle.empty_aux
+       case #by_depth -> render_projected_triangles
+                         s.h s.w triangles_slopes
+                         pixel_color.by_depth.pixel_color
+                         (pixel_color.by_depth.triangles_aux triangles_slopes)
+                         pixel_color.by_depth.empty_aux
+       case #by_height -> render_projected_triangles
+                          s.h s.w triangles_slopes
+                          pixel_color.by_height.pixel_color
+                          (pixel_color.by_height.triangles_aux triangles_slopes)
+                          pixel_color.by_height.empty_aux
 
   def get_speed (delta: f32) (shift: bool): f32 =
     delta * if shift then 6 else 1
@@ -163,13 +220,13 @@ module lys: lys with text_content = text_content = {
       let common_controls =
         cond SDLK_LSHIFT (\() -> keys with shift = pressed)
              <-< cond SDLK_RSHIFT (\() -> keys with shift = pressed)
+             <-< cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
+             <-< cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
              <-< cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
              <-< cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
 
       let mouse_controls =
-        cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
-             <-< cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
-             <-< cond SDLK_SPACE (\() -> keys with space = pressed)
+        cond SDLK_SPACE (\() -> keys with space = pressed)
 
       let keyboard_controls =
         cond SDLK_LALT (\() -> keys with alt = pressed)
@@ -186,9 +243,14 @@ module lys: lys with text_content = text_content = {
 
     def down (key: i32) (s: state): state =
       if key == SDLK_TAB
-      then s with navigation = match s.navigation
-                               case #mouse -> #keyboard
-                               case #keyboard -> #mouse
+      then if s.keys.ctrl
+           then s with pixel_color_approach = match s.pixel_color_approach
+                                              case #by_triangle -> #by_depth
+                                              case #by_depth -> #by_height
+                                              case #by_height -> #by_triangle
+           else s with navigation = match s.navigation
+                                    case #mouse -> #keyboard
+                                    case #keyboard -> #mouse
       else s with keys = change s.navigation key true s.keys
 
     def up (key: i32) (s: state): state =

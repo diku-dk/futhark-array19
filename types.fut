@@ -1,4 +1,5 @@
 import "lib/github.com/athas/vector/vspace"
+import "lib/github.com/athas/matte/colour"
 import "quaternion"
 
 module vec3 = mk_vspace_3d f32
@@ -36,3 +37,5 @@ type camera = {position: vec3.vector, orientation: vec3.vector}
 type trig = {sin: vec3.vector, cos: vec3.vector}
 
 module quaternion = mk_quaternion f32
+
+type^ pixel_color_function 'a = (point_projected_1d, a) -> argb.colour

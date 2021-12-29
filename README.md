@@ -25,7 +25,8 @@ Base controls:
 
   + Shift+other action: Move or turn faster
   + PageUp/PageDown: Increase/decrease draw distance
-  + TAB: Change navigation controls (see below)
+  + Tab: Change navigation controls (see below)
+  + Ctrl+Tab: Change pixel coloring approach
   + F1: Toggle text
   + ESC: Exit (press once to exit the mouse grabbing, twice to exit the program)
 

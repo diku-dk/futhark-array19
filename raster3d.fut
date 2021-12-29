@@ -1,7 +1,6 @@
 import "lib/github.com/athas/matte/colour"
 import "types"
 import "scanline"
-import "hsv"
 
 def bubble_point
     (a: point_projected)
@@ -124,13 +123,14 @@ def project_triangles_in_view
   in zip triangles_slopes colours'
 
 -- | Render projected triangles using expand and reduce_by_index.
-def render_projected_triangles [n]
+def render_projected_triangles [n] 'a
     (h: i64)
     (w: i64)
     (triangles_prepared: [n]triangle_slopes)
-    (colours: [n]argb.colour): [h][w]argb.colour =
+    (pixel_color: pixel_color_function a)
+    (aux: [n]a)
+    (aux_empty: a): [h][w]argb.colour =
   -- Store the triangle indices along the found lines and points.
-  let aux = 0..<n
   let lines = lines_of_triangles triangles_prepared aux
   let points = points_of_lines lines
   let points' = filter (\(p, _) ->
@@ -139,36 +139,14 @@ def render_projected_triangles [n]
   let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
   let points'' = map (\(p, aux) -> ({projected={i=p.projected.y * i32.i64 w + p.projected.x}, z=z_inv p.z,
                                      world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}}, aux)) points'
-  let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, -1)
+  let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, aux_empty)
 
-  let z_check ((a, aux_a): (point_projected_1d, i64))
-              ((b, aux_b): (point_projected_1d, i64))
-              : (point_projected_1d, i64) =
+  let z_check ((a, aux_a): (point_projected_1d, a))
+              ((b, aux_b): (point_projected_1d, a))
+              : (point_projected_1d, a) =
     if (a.z >= 0 && a.z < b.z) || b.z < 0
     then (a, aux_a)
     else (b, aux_b)
-
-  -- FIXME: Generalize drawing system to pick one of these in a smart way.
-  let pixel_color_orig ((p, _aux): (point_projected_1d, i64)): argb.colour =
-    if p.projected.i == -1
-    then argb.white
-    else colours[p.projected.i]
-
-  -- Experiment: Visualize depth buffer
-  let pixel_depth (z: f32): f32 =
-    if z < 0
-    then 1
-    else z / 100000 -- FIXME: don't use constants
-
-  let pixel_color_depth_buffer ((p, _aux): (point_projected_1d, i64)): argb.colour =
-    argb.gray (pixel_depth p.z)
-
-  -- Experiment: Visualize height
-  let pixel_color_y ((p, _aux): (point_projected_1d, i64)): argb.colour =
-    let f = (p.world.y + 4000) / 8000 -- FIXME: don't use constants
-    in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth p.z, 0.5)
-
-  let pixel_color = pixel_color_y
 
   let pixels = replicate (h * w) empty
   -- FIXME: Use reduce_by_index_2d instead.
