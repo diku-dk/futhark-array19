@@ -69,12 +69,12 @@ module lys: lys with text_content = text_content = {
     let (triangles_slopes, colours) = unzip s.triangles_in_view
     in render_projected_triangles s.h s.w triangles_slopes colours
 
-  def get_move_factor (td: f32) (s: state): f32 =
-    200 * td * if s.keys.shift then 6 else 1
+  def get_speed (delta: f32) (shift: bool): f32 =
+    delta * if shift then 6 else 1
 
   module camera = {
-    def move (move_factor: f32) op (camera: camera): camera =
-      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (f32.i32 0) (5 * move_factor)}
+    def move (speed: f32) (op: f32 -> f32 -> f32) (camera: camera): camera =
+      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (f32.i32 0) (5 * speed)}
       in camera with position = camera.position vec3.+ v
 
     def turn (turn: vec3.vector) (camera: camera): camera =
@@ -83,11 +83,11 @@ module lys: lys with text_content = text_content = {
       let q' = quaternion.(q * q_rotation)
       in camera with orientation = quaternion_to_euler q'
 
-    def turn_y (move_factor: f32) op = turn {x=0, y=op (f32.i32 0) (0.005 * move_factor), z=0}
-    def turn_z (move_factor: f32) op = turn {x=0, y=0, z=op (f32.i32 0) (0.005 * move_factor)}
-    def turn_x (move_factor: f32) op = turn {x=op (f32.i32 0) (0.005 * move_factor), y=0, z=0}
+    def turn_y (speed: f32) (op: f32 -> f32 -> f32) = turn {x=0, y=op (f32.i32 0) (0.005 * speed), z=0}
+    def turn_z (speed: f32) (op: f32 -> f32 -> f32) = turn {x=0, y=0, z=op (f32.i32 0) (0.005 * speed)}
+    def turn_x (speed: f32) (op: f32 -> f32 -> f32) = turn {x=op (f32.i32 0) (0.005 * speed), y=0, z=0}
 
-    def step (navigation: navigation) (move_factor: f32) (keys: keys_state) (camera: camera) =
+    def step (navigation: navigation) (speed: f32) (keys: keys_state) (camera: camera): (camera, bool) =
       let pick dir kind (camera, changes) =
         dir (camera, changes) (\op -> kind (\k -> k op camera))
 
@@ -108,11 +108,11 @@ module lys: lys with text_content = text_content = {
                                   then action orig
                                   else orig
 
-      let mouse_actions = when keys.space (\(camera, _) -> (move move_factor (+) camera, true))
+      let mouse_actions = when keys.space (\(camera, _) -> (move speed (+) camera, true))
 
       let keyboard_actions =
-        pick (minus_plus keys.down keys.up) (alt_kind (turn_x move_factor) (move move_factor))
-             >-> pick (minus_plus keys.left keys.right) (alt_kind (turn_z move_factor) (turn_y move_factor))
+        pick (minus_plus keys.down keys.up) (alt_kind (turn_x speed) (move speed))
+             >-> pick (minus_plus keys.left keys.right) (alt_kind (turn_z speed) (turn_y speed))
 
       let use actions =
         id (camera, false)
@@ -124,13 +124,14 @@ module lys: lys with text_content = text_content = {
        case #keyboard -> use keyboard_actions
   }
 
-  def step (td: f32) (s: state) =
-    let move_factor = get_move_factor td s
-    let (camera', camera_changes) = camera.step s.navigation move_factor s.keys s.camera
+  def step (td: f32) (s: state): state =
+    let factor = 200
+    let speed = get_speed (td * factor) s.keys.shift
+    let (camera', camera_changes) = camera.step s.navigation speed s.keys s.camera
     let draw_dist' = if s.keys.pageup
-                     then s.draw_dist + 5 * move_factor
+                     then s.draw_dist + 5 * speed
                      else if s.keys.pagedown
-                     then s.draw_dist - 5 * move_factor
+                     then s.draw_dist - 5 * speed
                      else s.draw_dist
     in s with camera = camera'
          with draw_dist = draw_dist'
@@ -143,58 +144,61 @@ module lys: lys with text_content = text_content = {
   def mouse ((x, y): (i32, i32)) (s: state): state =
     match s.navigation
     case #mouse ->
-      s with camera = (if s.keys.ctrl
-                       then camera.turn_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
-                       else camera.turn_z (get_move_factor (r32 x / 100) s) (+) s.camera)
-                      |> camera.turn_x (get_move_factor (-r32 y / 100) s) (+)
+      let factor = 1
+      in s with camera = (if s.keys.ctrl
+                          then camera.turn_y (get_speed (r32 x * factor) s.keys.shift) (+) s.camera
+                          else camera.turn_z (get_speed (r32 x * factor) s.keys.shift) (+) s.camera)
+                         |> camera.turn_x (get_speed (-r32 y * factor) s.keys.shift) (+)
         with is_still = false
     case #keyboard -> s
 
-  def keychange (navigation: navigation) (k: i32) (pressed: bool) (keys: keys_state): keys_state =
-    let cond (elem: i32) (action_then: () -> keys_state) (action_else: () -> keys_state) (): keys_state =
-      if k == elem
-      then action_then ()
-      else action_else ()
+  module keyboard = {
+    def change (navigation: navigation) (k: i32) (pressed: bool) (keys: keys_state): keys_state =
+      let cond (elem: i32) (action_then: () -> keys_state) (action_else: () -> keys_state) (): keys_state =
+        if k == elem
+        then action_then ()
+        else action_else ()
 
-    let common_controls =
-      cond SDLK_LSHIFT (\() -> keys with shift = pressed)
-           <-< cond SDLK_RSHIFT (\() -> keys with shift = pressed)
-           <-< cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
-           <-< cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
+      let common_controls =
+        cond SDLK_LSHIFT (\() -> keys with shift = pressed)
+             <-< cond SDLK_RSHIFT (\() -> keys with shift = pressed)
+             <-< cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
+             <-< cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
 
-    let mouse_controls =
-      cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
-           <-< cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
-           <-< cond SDLK_SPACE (\() -> keys with space = pressed)
+      let mouse_controls =
+        cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
+             <-< cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
+             <-< cond SDLK_SPACE (\() -> keys with space = pressed)
 
-    let keyboard_controls =
-      cond SDLK_LALT (\() -> keys with alt = pressed)
-      <-< cond SDLK_RALT (\() -> keys with alt = pressed)
-      <-< cond SDLK_DOWN (\() -> keys with down = pressed)
-      <-< cond SDLK_UP (\() -> keys with up = pressed)
-      <-< cond SDLK_LEFT (\() -> keys with left = pressed)
-      <-< cond SDLK_RIGHT (\() -> keys with right = pressed)
+      let keyboard_controls =
+        cond SDLK_LALT (\() -> keys with alt = pressed)
+             <-< cond SDLK_RALT (\() -> keys with alt = pressed)
+             <-< cond SDLK_DOWN (\() -> keys with down = pressed)
+             <-< cond SDLK_UP (\() -> keys with up = pressed)
+             <-< cond SDLK_LEFT (\() -> keys with left = pressed)
+             <-< cond SDLK_RIGHT (\() -> keys with right = pressed)
 
-    let use controls = (common_controls <| controls <| const keys) ()
-    in match navigation
-       case #mouse -> use mouse_controls
-       case #keyboard -> use keyboard_controls
+      let use controls = (common_controls <| controls <| const keys) ()
+      in match navigation
+         case #mouse -> use mouse_controls
+         case #keyboard -> use keyboard_controls
 
-  def keydown (key: i32) (s: state): state =
-    if key == SDLK_TAB
-    then s with navigation = match s.navigation
-                             case #mouse -> #keyboard
-                             case #keyboard -> #mouse
-    else s with keys = keychange s.navigation key true s.keys
+    def down (key: i32) (s: state): state =
+      if key == SDLK_TAB
+      then s with navigation = match s.navigation
+                               case #mouse -> #keyboard
+                               case #keyboard -> #mouse
+      else s with keys = change s.navigation key true s.keys
 
-  def keyup (key: i32) (s: state): state =
-    s with keys = keychange s.navigation key false s.keys
+    def up (key: i32) (s: state): state =
+      s with keys = change s.navigation key false s.keys
+  }
 
   def event (e: event) (s: state): state =
     match e
     case #step td -> step td s
     case #wheel _ -> s
     case #mouse {buttons=_, x, y} -> mouse (x, y) s
-    case #keydown {key} -> keydown key s
-    case #keyup {key} -> keyup key s
+    case #keydown {key} -> keyboard.down key s
+    case #keyup {key} -> keyboard.up key s
 }
