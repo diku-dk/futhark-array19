@@ -6,6 +6,10 @@
 -- | The type of modules that implement a notion of quaternions.
 -- Semantically, a quaternions. can be seen as a 4-tuple of numbers
 -- (but this need not be the representation).
+
+-- Based on
+-- http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/index.htm
+
 module type quaternion = {
   -- | The type of the components of the quaternion.
   type real

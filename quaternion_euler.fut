@@ -1,5 +1,8 @@
 -- | Conversions between quaternions and Euler angles.
 
+-- Based on
+-- http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/index.htm
+
 import "lib/github.com/athas/vector/vspace"
 import "quaternion"
 
