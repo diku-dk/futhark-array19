@@ -86,7 +86,7 @@ module lys: lys with text_content = text_content = {
   def turn_camera_z (move_factor: f32) op = turn_camera {x=0, y=0, z=op (f32.i32 0) (0.005 * move_factor)}
   def turn_camera_x (move_factor: f32) op = turn_camera {x=op (f32.i32 0) (0.005 * move_factor), y=0, z=0}
 
-  def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
+  def step_camera (navigation: navigation) (move_factor: f32) (keys: keys_state) (camera: camera) =
     let pick dir kind (camera, changes) =
       dir (camera, changes) (\op -> kind (\k -> k op camera))
 
@@ -107,14 +107,24 @@ module lys: lys with text_content = text_content = {
                                 then action orig
                                 else orig
 
-    in id (camera, false)
-       |> pick (minus_plus keys.down keys.up) (alt_kind (turn_camera_x move_factor) (move_camera move_factor))
-       |> pick (minus_plus keys.left keys.right) (alt_kind (turn_camera_z move_factor) (turn_camera_y move_factor))
-       |> when keys.space (\(camera, _) -> (move_camera move_factor (+) camera, true))
+    let mouse_actions = when keys.space (\(camera, _) -> (move_camera move_factor (+) camera, true))
+
+    let keyboard_actions =
+      pick (minus_plus keys.down keys.up) (alt_kind (turn_camera_x move_factor) (move_camera move_factor))
+      >-> pick (minus_plus keys.left keys.right) (alt_kind (turn_camera_z move_factor) (turn_camera_y move_factor))
+
+    let use actions =
+      id (camera, false)
+       |> actions
+       |> mouse_actions
+
+    in match navigation
+       case #mouse -> use mouse_actions
+       case #keyboard -> use keyboard_actions
 
   def step (td: f32) (s: state) =
     let move_factor = get_move_factor td s
-    let (camera', camera_changes) = step_camera move_factor s.keys s.camera
+    let (camera', camera_changes) = step_camera s.navigation move_factor s.keys s.camera
     let draw_dist' = if s.keys.pageup
                      then s.draw_dist + 5 * move_factor
                      else if s.keys.pagedown
