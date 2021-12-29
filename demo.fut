@@ -160,7 +160,6 @@ module lys: lys with text_content = text_content = {
                                      else if p
                                      then changed f id
                                      else current
-      let just k f = f k
 
       let when pred action orig = if pred
                                   then action orig
@@ -172,14 +171,9 @@ module lys: lys with text_content = text_content = {
         pick (minus_plus keys.down keys.up) (alt_kind (turn_x speed) (move speed))
              >-> pick (minus_plus keys.left keys.right) (alt_kind (turn_z speed) (turn_y speed))
 
-      let use actions =
-        id (camera, false)
-        |> actions
-        |> mouse_actions
-
       in match navigation
-         case #mouse -> use mouse_actions
-       case #keyboard -> use keyboard_actions
+         case #mouse -> mouse_actions (camera, false)
+         case #keyboard -> keyboard_actions (camera, false)
   }
 
   def step (td: f32) (s: state): state =
