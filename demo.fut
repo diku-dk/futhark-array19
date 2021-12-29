@@ -237,9 +237,11 @@ module lys: lys with text_content = text_content = {
              <-< cond SDLK_RIGHT (\() -> keys with right = pressed)
 
       let use controls = (common_controls <| controls <| const keys) ()
-      in match navigation
-         case #mouse -> use mouse_controls
-         case #keyboard -> use keyboard_controls
+      in if !pressed -- Allow releasing pressed keys
+         then use (mouse_controls >-> keyboard_controls)
+         else match navigation
+              case #mouse -> use mouse_controls
+              case #keyboard -> use keyboard_controls
 
     def down (key: i32) (s: state): state =
       if key == SDLK_TAB
