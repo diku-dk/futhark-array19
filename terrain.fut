@@ -135,3 +135,18 @@ def generate_terrain
   let y_min = reduce f32.min f32.inf ys
   let y_max = reduce f32.max (-f32.inf) ys
   in (zip triangles colors, (y_min, y_max))
+
+-- ==
+-- entry: benchmark
+-- compiled input { 1000i64 1000i64 300i64 100000f32 64 3 0 }
+entry benchmark
+  (depth: i64)
+  (width: i64)
+  (size: i64)
+  (fluct: f32)
+  (smooth_iterations_areas: i32)
+  (smooth_iterations_colours: i32)
+  (seed: i32): ([]triangle, []argb.colour, f32, f32) =
+  let (a, b) = generate_terrain depth width size fluct smooth_iterations_areas smooth_iterations_colours seed
+  let (a0, a1) = unzip a
+  in (a0, a1, b.0, b.1)
