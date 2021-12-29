@@ -148,33 +148,25 @@ module lys: lys with text_content = text_content = {
     s with h = h with w = w
 
   def keychange k pressed (keys: keys_state): keys_state =
-    if k == SDLK_LSHIFT
-    then keys with shift = pressed
-    else if k == SDLK_RSHIFT
-    then keys with shift = pressed
-    else if k == SDLK_LALT
-    then keys with alt = pressed
-    else if k == SDLK_RALT
-    then keys with alt = pressed
-    else if k == SDLK_LCTRL
-    then keys with ctrl = pressed
-    else if k == SDLK_RCTRL
-    then keys with ctrl = pressed
-    else if k == SDLK_DOWN
-    then keys with down = pressed
-    else if k == SDLK_UP
-    then keys with up = pressed
-    else if k == SDLK_LEFT
-    then keys with left = pressed
-    else if k == SDLK_RIGHT
-    then keys with right = pressed
-    else if k == SDLK_PAGEDOWN
-    then keys with pagedown = pressed
-    else if k == SDLK_PAGEUP
-    then keys with pageup = pressed
-    else if k == SDLK_SPACE
-    then keys with space = pressed
-    else keys
+    let cond (elem: i32) (action_then: () -> keys_state) (action_else: () -> keys_state) (): keys_state =
+      if k == elem
+      then action_then ()
+      else action_else ()
+    in (cond SDLK_LSHIFT (\() -> keys with shift = pressed)
+        <| cond SDLK_RSHIFT (\() -> keys with shift = pressed)
+        <| cond SDLK_LALT (\() -> keys with alt = pressed)
+        <| cond SDLK_RALT (\() -> keys with alt = pressed)
+        <| cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
+        <| cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
+        <| cond SDLK_DOWN (\() -> keys with down = pressed)
+        <| cond SDLK_UP (\() -> keys with up = pressed)
+        <| cond SDLK_LEFT (\() -> keys with left = pressed)
+        <| cond SDLK_RIGHT (\() -> keys with right = pressed)
+        <| cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
+        <| cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
+        <| cond SDLK_SPACE (\() -> keys with space = pressed)
+        <| const keys)
+       ()
 
   def event (e: event) (s: state) =
     match e
