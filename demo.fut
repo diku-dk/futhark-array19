@@ -139,7 +139,7 @@ module lys: lys with text_content = text_content = {
     in s with camera = camera'
          with draw_dist = draw_dist'
          with is_still = !camera_changes
-         with triangles_in_view = if true -- camera_changes || !s.is_still -- FIXME
+         with triangles_in_view = if camera_changes || !s.is_still
                                   then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
                                                                  camera' s.triangles_coloured
                                   else s.triangles_in_view
@@ -176,7 +176,8 @@ module lys: lys with text_content = text_content = {
       s with camera = (if s.keys.ctrl
                           then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
                           else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
-                         |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
+                      |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
+        with is_still = false
     case #keydown {key} -> s with keys = keychange key true s.keys
     case #keyup {key} -> s with keys = keychange key false s.keys
 }
