@@ -58,7 +58,14 @@ module lys: lys with text_content = text_content = {
 
   type text_content = text_content
 
-  def text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f\nNavigation: %[Mouse|Keyboard]"
+  def text_format () = "FPS: %d\n"
+                       ++ "Triangles (before culling): %d\n"
+                       ++ "Triangles (after culling): %d\n"
+                       ++ "Position: (%.1f, %.1f, %.1f)\n"
+                       ++ "Orientation: (%.1f, %.1f, %.1f)\n"
+                       ++ "View distance (FOV): %.1f\n"
+                       ++ "Draw distance: %.1f\n"
+                       ++ "Navigation: %[Mouse|Keyboard]"
 
   def text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
