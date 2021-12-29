@@ -39,7 +39,7 @@ module lys: lys with text_content = text_content = {
                  draw_dist: f32,
                  camera: camera,
                  is_still: bool,
-                 triangles_coloured: [](triangle, argb.colour),
+                 triangles_coloured: ([](triangle, argb.colour), (f32, f32)),
                  triangles_in_view: [](triangle_slopes, argb.colour),
                  keys: keys_state,
                  navigation: navigation,
@@ -58,7 +58,7 @@ module lys: lys with text_content = text_content = {
                        ++ "Pixel color: By %[triangle|depth|height]"
 
   def text_content (fps: f32) (s: state): text_content =
-    (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
+    (t32 fps, length s.triangles_coloured.0, length s.triangles_in_view,
      s.camera.position.x, s.camera.position.y, s.camera.position.z,
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
      s.view_dist, s.draw_dist,
@@ -79,7 +79,7 @@ module lys: lys with text_content = text_content = {
 
     let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 (i32.u32 terrain_seed)
     let triangles_in_view = project_triangles_in_view h w view_dist draw_dist
-                                                      camera triangles_coloured
+                                                      camera triangles_coloured.0
     in {w, h,
         view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
@@ -115,9 +115,9 @@ module lys: lys with text_content = text_content = {
       type aux = ()
       def empty_aux = ()
       def triangles_aux [n] (_: [n]triangle_slopes): [n]() = replicate n ()
-      def pixel_color (draw_dist: f32) ((p, _aux): (point_projected_1d, ())): argb.colour =
-        let f = (p.world.y + 4000) / 8000 -- FIXME: don't use constants
-        in hsv_to_rgb ((360 * f) % 360, 1 - pixel_depth draw_dist p.z, 0.5)
+      def pixel_color (y_min: f32) (y_span: f32) (draw_dist: f32) ((p, _aux): (point_projected_1d, ())): argb.colour =
+        let f = (p.world.y - y_min) / y_span
+        in hsv_to_rgb (360 * f, 1 - pixel_depth draw_dist p.z, 0.5)
     }
   }
 
@@ -136,7 +136,9 @@ module lys: lys with text_content = text_content = {
                          pixel_color.by_depth.empty_aux
        case #by_height -> render_projected_triangles
                           s.h s.w triangles_slopes
-                          (pixel_color.by_height.pixel_color s.draw_dist)
+                          (pixel_color.by_height.pixel_color s.triangles_coloured.1.0
+                                                             (s.triangles_coloured.1.1 - s.triangles_coloured.1.0)
+                                                             s.draw_dist)
                           (pixel_color.by_height.triangles_aux triangles_slopes)
                           pixel_color.by_height.empty_aux
 
@@ -204,7 +206,7 @@ module lys: lys with text_content = text_content = {
          with is_still = !camera_changes
          with triangles_in_view = if camera_changes || !s.is_still
                                   then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
-                                                                 camera' s.triangles_coloured
+                                                                 camera' s.triangles_coloured.0
                                   else s.triangles_in_view
 
   def mouse ((x, y): (i32, i32)) (s: state): state =
