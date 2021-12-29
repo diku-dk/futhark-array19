@@ -39,8 +39,6 @@ def quaternion_to_euler (q: quaternion.quaternion): vec3.vector =
            y=f32.atan2 (2 * q.c * q.a - 2 * q.b * q.d) (sqb - sqc - sqd + sqa),
            z=f32.asin (2 * test / unit)}
 
-def when pred action orig = if pred then action orig else orig
-
 type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, space: bool}
 
@@ -65,7 +63,9 @@ module lys: lys with text_content = text_content = {
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
      s.view_dist, s.draw_dist)
 
-  def text_colour = const argb.blue
+  def text_colour = const argb.black
+
+  def grab_mouse = true
 
   def init (terrain_seed: u32) (h: i64) (w: i64): state =
     let view_dist = 600
@@ -103,16 +103,23 @@ module lys: lys with text_content = text_content = {
   def step_camera (move_factor: f32) (keys: keys_state) (camera: camera) =
     let pick dir kind (camera, changes) =
       dir (camera, changes) (\op -> kind (\k -> k op camera))
+
     let changed f op = (f op, true)
+
     let alt_kind y n f = if keys.alt
                          then f y
                          else f n
+
     let minus_plus m p current f = if m
                                    then changed f (-)
                                    else if p
                                    then changed f (+)
                                    else current
     let just k f = f k
+
+    let when pred action orig = if pred
+                                then action orig
+                                else orig
 
     in id (camera, false)
        |> pick (minus_plus keys.down keys.up) (alt_kind (turn_camera_x move_factor) (move_camera move_factor))
@@ -173,13 +180,11 @@ module lys: lys with text_content = text_content = {
     match e
     case #step td -> step td s
     case #wheel _ -> s
-    case #mouse {buttons, x, y} ->
+    case #mouse {buttons=_, x, y} ->
       s with camera = (if s.keys.ctrl
                           then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
                           else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
                          |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
     case #keydown {key} -> s with keys = keychange key true s.keys
     case #keyup {key} -> s with keys = keychange key false s.keys
-
-  def grab_mouse = true
 }

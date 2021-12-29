@@ -18,19 +18,19 @@ def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes
   map normalize_triangle_points triangles
   |> map (\triangle -> triangle_slopes triangle)
 
-def rotate_x ({sin, cos}: {sin: vec3.vector, cos: vec3.vector})
+def rotate_x ({sin, cos}: trig)
              ({x, y, z}: vec3.vector): vec3.vector =
   {x,
    y=y * cos.x - z * sin.x,
    z=y * sin.x + z * cos.x}
 
-def rotate_y ({sin, cos}: {sin: vec3.vector, cos: vec3.vector})
+def rotate_y ({sin, cos}: trig)
              ({x, y, z}: vec3.vector): vec3.vector =
   {x=z * sin.y + x * cos.y,
    y,
    z=z * cos.y - x * sin.y}
 
-def rotate_z ({sin, cos}: {sin: vec3.vector, cos: vec3.vector})
+def rotate_z ({sin, cos}: trig)
              ({x, y, z}: vec3.vector): vec3.vector =
   {x=x * cos.z - y * sin.z,
    y=x * sin.z + y * cos.z,
