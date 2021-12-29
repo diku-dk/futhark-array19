@@ -6,6 +6,8 @@ import "quaternion"
 import "quaternion_euler"
 import "hsv"
 
+module qe_conversions = mk_quaternion_euler_conversions f32
+
 type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, space: bool}
 
@@ -147,10 +149,10 @@ module lys: lys with text_content = text_content = {
       in camera with position = camera.position vec3.+ v
 
     def turn (turn: vec3.vector) (camera: camera): camera =
-      let q = euler_to_quaternion camera.orientation
-      let q_rotation = euler_to_quaternion turn
+      let q = qe_conversions.euler_to_quaternion camera.orientation
+      let q_rotation = qe_conversions.euler_to_quaternion turn
       let q' = quaternion.(q * q_rotation)
-      in camera with orientation = quaternion_to_euler q'
+      in camera with orientation = qe_conversions.quaternion_to_euler q'
 
     def turn_speed = 0.005f32
     def turn_y (speed: f32) (op: f32 -> f32) = turn {x=0, y=op (turn_speed * speed), z=0}
