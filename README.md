@@ -25,10 +25,11 @@ Base controls:
 
   + Shift+other action: Move or turn faster
   + PageUp/PageDown: Increase/decrease draw distance
+  + TAB: Change navigation controls (see below)
   + F1: Toggle text
   + ESC: Exit (press once to exit the mouse grabbing, twice to exit the program)
 
-Mouse controls for navigation:
+Mouse controls for navigation (default):
 
   + Mouse: Move around
   + Ctrl+mouse: Move along the y axis instead of the z axis when moving

@@ -42,7 +42,9 @@ def quaternion_to_euler (q: quaternion.quaternion): vec3.vector =
 type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, space: bool}
 
-type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32)
+type navigation = #mouse | #keyboard
+
+type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, i32)
 module lys: lys with text_content = text_content = {
   type~ state = {h: i64, w: i64,
                  view_dist: f32, -- another way of expressing the FOV
@@ -51,17 +53,21 @@ module lys: lys with text_content = text_content = {
                  is_still: bool,
                  triangles_coloured: [](triangle_coloured argb.colour),
                  triangles_in_view: [](triangle_slopes, argb.colour),
-                 keys: keys_state}
+                 keys: keys_state,
+                 navigation: navigation}
 
   type text_content = text_content
 
-  def text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f"
+  def text_format () = "FPS: %d\nTriangles (before culling): %d\nTriangles (after culling): %d\nPosition: (%.1f, %.1f, %.1f)\nOrientation: (%.1f, %.1f, %.1f)\nView distance (FOV): %.1f\nDraw distance: %.1f\nNavigation: %[Mouse|Keyboard]"
 
   def text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured, length s.triangles_in_view,
      s.camera.position.x, s.camera.position.y, s.camera.position.z,
      s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
-     s.view_dist, s.draw_dist)
+     s.view_dist, s.draw_dist,
+     (match s.navigation
+      case #mouse -> 0
+      case #keyboard -> 1))
 
   def text_colour = const argb.black
 
@@ -80,7 +86,8 @@ module lys: lys with text_content = text_content = {
         view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
         keys={shift=false, alt=false, ctrl=false, down=false, up=false, left=false, right=false,
-              pagedown=false, pageup=false, space=false}}
+              pagedown=false, pageup=false, space=false},
+       navigation=#mouse}
 
   def render (s: state) =
     let (triangles_slopes, colours) = unzip s.triangles_in_view
@@ -147,37 +154,54 @@ module lys: lys with text_content = text_content = {
   def resize (h: i64) (w: i64) (s: state) =
     s with h = h with w = w
 
-  def keychange k pressed (keys: keys_state): keys_state =
+  def keychange (navigation: navigation) k pressed (keys: keys_state): keys_state =
     let cond (elem: i32) (action_then: () -> keys_state) (action_else: () -> keys_state) (): keys_state =
       if k == elem
       then action_then ()
       else action_else ()
-    in (cond SDLK_LSHIFT (\() -> keys with shift = pressed)
-        <| cond SDLK_RSHIFT (\() -> keys with shift = pressed)
-        <| cond SDLK_LALT (\() -> keys with alt = pressed)
-        <| cond SDLK_RALT (\() -> keys with alt = pressed)
-        <| cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
-        <| cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
-        <| cond SDLK_DOWN (\() -> keys with down = pressed)
-        <| cond SDLK_UP (\() -> keys with up = pressed)
-        <| cond SDLK_LEFT (\() -> keys with left = pressed)
-        <| cond SDLK_RIGHT (\() -> keys with right = pressed)
-        <| cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
-        <| cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
-        <| cond SDLK_SPACE (\() -> keys with space = pressed)
-        <| const keys)
-       ()
+
+    let common_controls =
+      cond SDLK_LSHIFT (\() -> keys with shift = pressed)
+           <-< cond SDLK_RSHIFT (\() -> keys with shift = pressed)
+           <-< cond SDLK_PAGEDOWN (\() -> keys with pagedown = pressed)
+           <-< cond SDLK_PAGEUP (\() -> keys with pageup = pressed)
+
+    let mouse_controls =
+      cond SDLK_LCTRL (\() -> keys with ctrl = pressed)
+           <-< cond SDLK_RCTRL (\() -> keys with ctrl = pressed)
+           <-< cond SDLK_SPACE (\() -> keys with space = pressed)
+
+    let keyboard_controls =
+      cond SDLK_LALT (\() -> keys with alt = pressed)
+      <-< cond SDLK_RALT (\() -> keys with alt = pressed)
+      <-< cond SDLK_DOWN (\() -> keys with down = pressed)
+      <-< cond SDLK_UP (\() -> keys with up = pressed)
+      <-< cond SDLK_LEFT (\() -> keys with left = pressed)
+      <-< cond SDLK_RIGHT (\() -> keys with right = pressed)
+
+    let use controls = (common_controls <| controls <| const keys) ()
+    in match navigation
+       case #mouse -> use mouse_controls
+       case #keyboard -> use keyboard_controls
 
   def event (e: event) (s: state) =
     match e
     case #step td -> step td s
     case #wheel _ -> s
     case #mouse {buttons=_, x, y} ->
-      s with camera = (if s.keys.ctrl
+      (match s.navigation
+       case #mouse ->
+         s with camera = (if s.keys.ctrl
                           then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
                           else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
-                      |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
-        with is_still = false
-    case #keydown {key} -> s with keys = keychange key true s.keys
-    case #keyup {key} -> s with keys = keychange key false s.keys
+                         |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
+           with is_still = false
+       case #keyboard ->
+         s)
+    case #keydown {key} -> if key == SDLK_TAB
+                           then s with navigation = match s.navigation
+                                                    case #mouse -> #keyboard
+                                                    case #keyboard -> #mouse
+                           else s with keys = keychange s.navigation key true s.keys
+    case #keyup {key} -> s with keys = keychange s.navigation key false s.keys
 }
