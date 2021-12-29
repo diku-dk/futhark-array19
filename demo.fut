@@ -28,12 +28,16 @@ def pixel_color_approach (i: i32): pixel_color_approach =
   case 2 -> #by_height
   case _ -> assert false #by_triangle
 
-type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, i32, i32)
+def camera_to_euler (camera: camera_quaternion): camera =
+  {position=camera.position,
+   orientation = qe_conversions.quaternion_to_euler camera.orientation}
+
+type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, f32, i32, i32)
 module lys: lys with text_content = text_content = {
   type~ state = {h: i64, w: i64,
                  view_dist: f32, -- another way of expressing the FOV
                  draw_dist: f32,
-                 camera: camera,
+                 camera: camera_quaternion,
                  is_still: bool,
                  triangles_coloured: ([](triangle, argb.colour), (f32, f32)),
                  triangles_in_view: [](triangle_slopes, argb.colour),
@@ -47,7 +51,7 @@ module lys: lys with text_content = text_content = {
                        ++ "Triangles (before culling): %d\n"
                        ++ "Triangles (after culling): %d\n"
                        ++ "Position: (%.1f, %.1f, %.1f)\n"
-                       ++ "Orientation: (%.1f, %.1f, %.1f)\n"
+                       ++ "Orientation: %.1f + %.1f i + %.1f j + %.1f k\n"
                        ++ "View distance (FOV): %.1f\n"
                        ++ "Draw distance: %.1f\n"
                        ++ "Navigation: %[Mouse|Keyboard]\n"
@@ -56,7 +60,7 @@ module lys: lys with text_content = text_content = {
   def text_content (fps: f32) (s: state): text_content =
     (t32 fps, length s.triangles_coloured.0, length s.triangles_in_view,
      s.camera.position.x, s.camera.position.y, s.camera.position.z,
-     s.camera.orientation.x, s.camera.orientation.y, s.camera.orientation.z,
+     s.camera.orientation.a, s.camera.orientation.b, s.camera.orientation.c, s.camera.orientation.d,
      s.view_dist, s.draw_dist,
      (match s.navigation
       case #mouse -> 0
@@ -71,11 +75,11 @@ module lys: lys with text_content = text_content = {
     let view_dist = 600
     let draw_dist = 100000
     let camera = {position={x=150000, y= -4000, z=100000},
-                  orientation=vec3.zero}
+                  orientation=qe_conversions.euler_to_quaternion vec3.zero}
 
     let triangles_coloured = generate_terrain 1000 1000 300 100000 64 3 (i32.u32 terrain_seed)
     let triangles_in_view = project_triangles_in_view h w view_dist draw_dist
-                                                      camera triangles_coloured.0
+                                                      (camera_to_euler camera) triangles_coloured.0
     in {w, h,
         view_dist, draw_dist, camera, is_still=false,
         triangles_coloured, triangles_in_view,
@@ -142,22 +146,21 @@ module lys: lys with text_content = text_content = {
     delta * if shift then 6 else 1
 
   module camera = {
-    def move (speed: f32) (op: f32 -> f32) (camera: camera): camera =
-      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (5 * speed)}
+    def move (speed: f32) (op: f32 -> f32) (camera: camera_quaternion): camera_quaternion =
+      -- FIXME: Don't convert to euler angles here (seems wasteful).
+      let v = rotate_point_inv (camera_to_euler camera).orientation vec3.zero {x=0, y=0, z=op (5 * speed)}
       in camera with position = camera.position vec3.+ v
 
-    def turn (turn: vec3.vector) (camera: camera): camera =
-      let q = qe_conversions.euler_to_quaternion camera.orientation
-      let q_rotation = qe_conversions.euler_to_quaternion turn
-      let q' = quaternion.(q * q_rotation)
-      in camera with orientation = qe_conversions.quaternion_to_euler q'
+    def turn (turn: vec3.vector) (camera: camera_quaternion): camera_quaternion =
+      let rotation = qe_conversions.euler_to_quaternion turn
+      in camera with orientation = quaternion.(camera.orientation * rotation)
 
     def turn_speed = 0.005f32
     def turn_y (speed: f32) (op: f32 -> f32) = turn {x=0, y=op (turn_speed * speed), z=0}
     def turn_z (speed: f32) (op: f32 -> f32) = turn {x=0, y=0, z=op (turn_speed * speed)}
     def turn_x (speed: f32) (op: f32 -> f32) = turn {x=op (turn_speed * speed), y=0, z=0}
 
-    def step (navigation: navigation) (speed: f32) (keys: keys_state) (camera: camera): (camera, bool) =
+    def step (navigation: navigation) (speed: f32) (keys: keys_state) (camera: camera_quaternion): (camera_quaternion, bool) =
       let pick dir kind (camera, changes) =
         dir (camera, changes) (\op -> kind (\k -> k op camera))
 
@@ -202,7 +205,7 @@ module lys: lys with text_content = text_content = {
          with is_still = !camera_changes
          with triangles_in_view = if camera_changes || !s.is_still
                                   then project_triangles_in_view s.h s.w s.view_dist s.draw_dist
-                                                                 camera' s.triangles_coloured.0
+                                                                 (camera_to_euler camera') s.triangles_coloured.0
                                   else s.triangles_in_view
 
   def mouse ((x, y): (i32, i32)) (s: state): state =

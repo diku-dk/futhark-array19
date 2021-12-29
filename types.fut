@@ -35,7 +35,9 @@ type line = {n_points: i32,
 
 type point_projected_1d = base_component {i: i32}
 
-type camera = {position: vec3.vector, orientation: vec3.vector}
+type camera_base 'orientation = {position: vec3.vector, orientation: orientation}
+type camera = camera_base vec3.vector -- Euler angles
+type camera_quaternion = camera_base quaternion.quaternion
 
 type trig = {sin: vec3.vector, cos: vec3.vector}
 
