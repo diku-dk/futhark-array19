@@ -48,10 +48,10 @@ module mk_quaternion(T: real): (quaternion with real = T.t
 
   def conj ({a, b, c, d}: quaternion): quaternion =
     T.({a, b=neg b, c=neg c, d=neg d})
-  def norm_pow2 ({a, b, c, d}: quaternion): real =
+  def sq ({a, b, c, d}: quaternion): real =
     T.(a * a + b * b + c * c + d * d)
   def norm (q: quaternion): real =
-    T.(sqrt (norm_pow2 q))
+    T.(sqrt (sq q))
   def rec (q: quaternion): quaternion =
-    conj q * T.({a=recip (norm_pow2 q), b=f32 0, c=f32 0, d=f32 0})
+    conj q * T.({a=recip (sq q), b=f32 0, c=f32 0, d=f32 0})
 }
