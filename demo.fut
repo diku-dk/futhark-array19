@@ -62,9 +62,15 @@ module lys: lys with text_content = text_content = {
               pagedown=false, pageup=false, space=false},
        navigation=#mouse}
 
+  def resize (h: i64) (w: i64) (s: state) =
+    s with h = h with w = w
+
   def render (s: state) =
     let (triangles_slopes, colours) = unzip s.triangles_in_view
     in render_projected_triangles s.h s.w triangles_slopes colours
+
+  def get_move_factor (td: f32) (s: state): f32 =
+    200 * td * if s.keys.shift then 6 else 1
 
   def move_camera (move_factor: f32) op (camera: camera): camera =
     let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (f32.i32 0) (5 * move_factor)}
@@ -106,9 +112,7 @@ module lys: lys with text_content = text_content = {
        |> pick (minus_plus keys.left keys.right) (alt_kind (turn_camera_z move_factor) (turn_camera_y move_factor))
        |> when keys.space (\(camera, _) -> (move_camera move_factor (+) camera, true))
 
-  def get_move_factor td (s: state): f32 = 200 * td * if s.keys.shift then 6 else 1
-
-  def step td (s: state) =
+  def step (td: f32) (s: state) =
     let move_factor = get_move_factor td s
     let (camera', camera_changes) = step_camera move_factor s.keys s.camera
     let draw_dist' = if s.keys.pageup
@@ -124,10 +128,17 @@ module lys: lys with text_content = text_content = {
                                                                  camera' s.triangles_coloured
                                   else s.triangles_in_view
 
-  def resize (h: i64) (w: i64) (s: state) =
-    s with h = h with w = w
+  def mouse ((x, y): (i32, i32)) (s: state): state =
+    match s.navigation
+    case #mouse ->
+      s with camera = (if s.keys.ctrl
+                       then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
+                       else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
+                      |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
+        with is_still = false
+    case #keyboard -> s
 
-  def keychange (navigation: navigation) k pressed (keys: keys_state): keys_state =
+  def keychange (navigation: navigation) (k: i32) (pressed: bool) (keys: keys_state): keys_state =
     let cond (elem: i32) (action_then: () -> keys_state) (action_else: () -> keys_state) (): keys_state =
       if k == elem
       then action_then ()
@@ -157,24 +168,21 @@ module lys: lys with text_content = text_content = {
        case #mouse -> use mouse_controls
        case #keyboard -> use keyboard_controls
 
-  def event (e: event) (s: state) =
+  def keydown (key: i32) (s: state): state =
+    if key == SDLK_TAB
+    then s with navigation = match s.navigation
+                             case #mouse -> #keyboard
+                             case #keyboard -> #mouse
+    else s with keys = keychange s.navigation key true s.keys
+
+  def keyup (key: i32) (s: state): state =
+    s with keys = keychange s.navigation key false s.keys
+
+  def event (e: event) (s: state): state =
     match e
     case #step td -> step td s
     case #wheel _ -> s
-    case #mouse {buttons=_, x, y} ->
-      (match s.navigation
-       case #mouse ->
-         s with camera = (if s.keys.ctrl
-                          then turn_camera_y (get_move_factor (r32 x / 100) s) (+) s.camera -- fixme td
-                          else turn_camera_z (get_move_factor (r32 x / 100) s) (+) s.camera)
-                         |> turn_camera_x (get_move_factor (-r32 y / 100) s) (+)
-           with is_still = false
-       case #keyboard ->
-         s)
-    case #keydown {key} -> if key == SDLK_TAB
-                           then s with navigation = match s.navigation
-                                                    case #mouse -> #keyboard
-                                                    case #keyboard -> #mouse
-                           else s with keys = keychange s.navigation key true s.keys
-    case #keyup {key} -> s with keys = keychange s.navigation key false s.keys
+    case #mouse {buttons=_, x, y} -> mouse (x, y) s
+    case #keydown {key} -> keydown key s
+    case #keyup {key} -> keyup key s
 }
