@@ -70,7 +70,7 @@ def camera_normalize_triangle
       camera_normalize_point r)
 
 def project_triangle
-    (h: i64) (w: i64)
+    (h_half: f32) (w_half: f32)
     (view_dist: f32)
     (camera: camera)
     (world: triangle): triangle_projected =
@@ -79,9 +79,9 @@ def project_triangle
     let z_ratio = if z >= 0.0
                   then (view_dist + z) / view_dist
                   else 1.0 / ((view_dist - z) / view_dist)
-    let x_projected = x / z_ratio + f32.i64 w / 2.0
-    let y_projected = y / z_ratio + f32.i64 h / 2.0
-    in {x=t32 x_projected, y=t32 y_projected}
+    let x_projected = x / z_ratio + w_half
+    let y_projected = y / z_ratio + h_half
+    in {x=t32 (f32.round x_projected), y=t32 (f32.round y_projected)}
 
   let normalized = camera_normalize_triangle camera world
   in ({projected=project_point normalized.0, world=world.0, z=normalized.0.z},
@@ -98,7 +98,7 @@ def project_triangles_in_view 'a
     (triangles_with_aux: [](triangle, a)): [](triangle_slopes, a) =
 
   let triangles = map (.0) triangles_with_aux
-  let triangles_projected = map (project_triangle h w view_dist camera) triangles
+  let triangles_projected = map (project_triangle (f32.i64 h / 2) (f32.i64 w / 2) view_dist camera) triangles
 
   let close_enough_dist (p: point_projected): bool =
     0.0 <= p.z && p.z < draw_dist
