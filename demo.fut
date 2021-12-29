@@ -73,8 +73,8 @@ module lys: lys with text_content = text_content = {
     delta * if shift then 6 else 1
 
   module camera = {
-    def move (speed: f32) (op: f32 -> f32 -> f32) (camera: camera): camera =
-      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (f32.i32 0) (5 * speed)}
+    def move (speed: f32) (op: f32 -> f32) (camera: camera): camera =
+      let v = rotate_point_inv camera.orientation vec3.zero {x=0, y=0, z=op (5 * speed)}
       in camera with position = camera.position vec3.+ v
 
     def turn (turn: vec3.vector) (camera: camera): camera =
@@ -83,9 +83,10 @@ module lys: lys with text_content = text_content = {
       let q' = quaternion.(q * q_rotation)
       in camera with orientation = quaternion_to_euler q'
 
-    def turn_y (speed: f32) (op: f32 -> f32 -> f32) = turn {x=0, y=op (f32.i32 0) (0.005 * speed), z=0}
-    def turn_z (speed: f32) (op: f32 -> f32 -> f32) = turn {x=0, y=0, z=op (f32.i32 0) (0.005 * speed)}
-    def turn_x (speed: f32) (op: f32 -> f32 -> f32) = turn {x=op (f32.i32 0) (0.005 * speed), y=0, z=0}
+    def turn_speed = 0.005f32
+    def turn_y (speed: f32) (op: f32 -> f32) = turn {x=0, y=op (turn_speed * speed), z=0}
+    def turn_z (speed: f32) (op: f32 -> f32) = turn {x=0, y=0, z=op (turn_speed * speed)}
+    def turn_x (speed: f32) (op: f32 -> f32) = turn {x=op (turn_speed * speed), y=0, z=0}
 
     def step (navigation: navigation) (speed: f32) (keys: keys_state) (camera: camera): (camera, bool) =
       let pick dir kind (camera, changes) =
@@ -98,9 +99,9 @@ module lys: lys with text_content = text_content = {
                            else f n
 
       let minus_plus m p current f = if m
-                                     then changed f (-)
+                                     then changed f f32.neg
                                      else if p
-                                     then changed f (+)
+                                     then changed f id
                                      else current
       let just k f = f k
 
@@ -108,7 +109,7 @@ module lys: lys with text_content = text_content = {
                                   then action orig
                                   else orig
 
-      let mouse_actions = when keys.space (\(camera, _) -> (move speed (+) camera, true))
+      let mouse_actions = when keys.space (\(camera, _) -> (move speed (id) camera, true))
 
       let keyboard_actions =
         pick (minus_plus keys.down keys.up) (alt_kind (turn_x speed) (move speed))
@@ -146,9 +147,9 @@ module lys: lys with text_content = text_content = {
     case #mouse ->
       let factor = 1
       in s with camera = (if s.keys.ctrl
-                          then camera.turn_y (get_speed (r32 x * factor) s.keys.shift) (+) s.camera
-                          else camera.turn_z (get_speed (r32 x * factor) s.keys.shift) (+) s.camera)
-                         |> camera.turn_x (get_speed (-r32 y * factor) s.keys.shift) (+)
+                          then camera.turn_y (get_speed (r32 x * factor) s.keys.shift) id s.camera
+                          else camera.turn_z (get_speed (r32 x * factor) s.keys.shift) id s.camera)
+                         |> camera.turn_x (get_speed (-r32 y * factor) s.keys.shift) id
         with is_still = false
     case #keyboard -> s
 
