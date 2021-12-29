@@ -130,7 +130,6 @@ def render_projected_triangles [n] 'a
     (pixel_color: pixel_color_function a)
     (aux: [n]a)
     (aux_empty: a): [h][w]argb.colour =
-  -- Store the triangle indices along the found lines and points.
   let lines = lines_of_triangles triangles_prepared aux
   let points = points_of_lines lines
   let points' = filter (\(p, _) ->
