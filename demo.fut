@@ -15,6 +15,21 @@ type pixel_color_approach = #by_triangle
                           | #by_depth
                           | #by_height
 
+def n_pixel_color_approaches = 3
+
+def pixel_color_id (approach: pixel_color_approach): i32 =
+  match approach
+  case #by_triangle -> 0
+  case #by_depth -> 1
+  case #by_height -> 2
+
+def pixel_color_approach (i: i32): pixel_color_approach =
+  match i
+  case 0 -> #by_triangle
+  case 1 -> #by_depth
+  case 2 -> #by_height
+  case _ -> assert false #by_triangle
+
 type text_content = (i32, i64, i64, f32, f32, f32, f32, f32, f32, f32, f32, i32, i32)
 module lys: lys with text_content = text_content = {
   type~ state = {h: i64, w: i64,
@@ -48,10 +63,7 @@ module lys: lys with text_content = text_content = {
      (match s.navigation
       case #mouse -> 0
       case #keyboard -> 1),
-     (match s.pixel_color_approach
-      case #by_triangle -> 0
-      case #by_depth -> 1
-      case #by_height -> 2))
+     pixel_color_id s.pixel_color_approach)
 
   def text_colour = const argb.black
 
@@ -240,10 +252,8 @@ module lys: lys with text_content = text_content = {
     def down (key: i32) (s: state): state =
       if key == SDLK_TAB
       then if s.keys.ctrl
-           then s with pixel_color_approach = match s.pixel_color_approach
-                                              case #by_triangle -> #by_depth
-                                              case #by_depth -> #by_height
-                                              case #by_height -> #by_triangle
+           then s with pixel_color_approach = pixel_color_approach ((pixel_color_id s.pixel_color_approach + 1)
+                                                                    % n_pixel_color_approaches)
            else s with navigation = match s.navigation
                                     case #mouse -> #keyboard
                                     case #keyboard -> #mouse
