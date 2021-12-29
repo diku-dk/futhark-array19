@@ -6,9 +6,9 @@
 import "lib/github.com/athas/vector/vspace"
 import "quaternion"
 
--- x roll/bank
--- y pitch/heading
--- z yaw/attitude
+-- x corresponds to roll/bank
+-- y corresponds to pitch/heading
+-- z corresponds to yaw/attitude
 
 module mk_quaternion_euler_conversions (real: real) = {
   module vec3 = mk_vspace_3d f32
