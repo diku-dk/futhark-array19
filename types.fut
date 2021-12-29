@@ -1,9 +1,11 @@
 import "lib/github.com/athas/vector/vspace"
 import "lib/github.com/athas/matte/colour"
 import "quaternion"
+import "quaternion_euler"
 
 module vec3 = mk_vspace_3d f32
 module quaternion = mk_quaternion f32
+module qe_conversions = mk_quaternion_euler_conversions f32
 
 type point_2d = {x: i32, y: i32}
 

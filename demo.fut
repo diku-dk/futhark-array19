@@ -2,11 +2,7 @@ import "lib/github.com/diku-dk/lys/lys"
 import "types"
 import "raster3d"
 import "terrain"
-import "quaternion"
-import "quaternion_euler"
 import "hsv"
-
-module qe_conversions = mk_quaternion_euler_conversions f32
 
 type keys_state = {shift: bool, alt: bool, ctrl: bool, down: bool, up: bool, left: bool, right: bool,
                    pagedown: bool, pageup: bool, space: bool}
