@@ -40,7 +40,7 @@ def generate_terrain
   (fluct: f32)
   (smooth_iterations_areas: i32)
   (smooth_iterations_colours: i32)
-  (seed: i32): [](triangle_coloured argb.colour) =
+  (seed: i32): [](triangle, argb.colour) =
 
   -- Generate points.
   let size_vert = f32.i64 size / 2 ** 0.5
@@ -109,25 +109,25 @@ def generate_terrain
                   let (rng, h') = dist.rand (h - 30.0, h + 30.0) rng
                   let (rng, s) = dist.rand (0.5, 1.0) rng
                   let (_rng, v) = dist.rand (0.5, 1.0) rng
-                  in {triangle=t, colour=(h', s, v)}
+                  in (t, (h', s, v))
                )) rngs triangles
 
   -- Smooth the colours.
   let triangles_coloured' =
-    iterate smooth_iterations_colours (\(tc: [n_triangles0][n_triangles1]triangle_coloured hsv) ->
+    iterate smooth_iterations_colours (\(tc: [n_triangles0][n_triangles1](triangle, hsv)) ->
       tabulate_2d n_triangles0 n_triangles1
                   (\i j ->
                      let t = tc[i,j]
                      in if i >= 1 && i < n_triangles0 - 1 && j >= 1 && j < n_triangles1 - 1
-                        then t with colour = (mix8
-                          tc[i-1,j-1].colour tc[i-1,j].colour tc[i-1,j+1].colour
-                          tc[i,  j-1].colour                  tc[i,  j+1].colour
-                          tc[i+1,j-1].colour tc[i+1,j].colour tc[i+1,j+1].colour)
+                        then t with 1 = (mix8
+                          tc[i-1,j-1].1 tc[i-1,j].1 tc[i-1,j+1].1
+                          tc[i,  j-1].1             tc[i,  j+1].1
+                          tc[i+1,j-1].1 tc[i+1,j].1 tc[i+1,j+1].1)
                         else t
                   )) triangles_coloured
 
   let triangles_coloured'' = map (map (\t ->
-                                         {triangle=t.triangle, colour=hsv_to_rgb t.colour}
+                                         (t.0, hsv_to_rgb t.1)
                                       )) triangles_coloured'
 
   in flatten triangles_coloured''

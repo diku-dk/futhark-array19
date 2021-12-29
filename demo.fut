@@ -15,7 +15,7 @@ type pixel_color_approach = #by_triangle
                           | #by_depth
                           | #by_height
 
-def n_pixel_color_approaches = 3
+def n_pixel_color_approaches = 3i32
 
 def pixel_color_id (approach: pixel_color_approach): i32 =
   match approach
@@ -37,7 +37,7 @@ module lys: lys with text_content = text_content = {
                  draw_dist: f32,
                  camera: camera,
                  is_still: bool,
-                 triangles_coloured: [](triangle_coloured argb.colour),
+                 triangles_coloured: [](triangle, argb.colour),
                  triangles_in_view: [](triangle_slopes, argb.colour),
                  keys: keys_state,
                  navigation: navigation,

@@ -89,15 +89,15 @@ def project_triangle
       {projected=project_point normalized.2, world=world.2, z=normalized.2.z})
 
 -- | Project triangles currently visible from the camera.
-def project_triangles_in_view
+def project_triangles_in_view 'a
     (h: i64)
     (w: i64)
     (view_dist: f32)
     (draw_dist: f32)
     (camera: camera)
-    (triangles_coloured: [](triangle_coloured argb.colour)): [](triangle_slopes, argb.colour) =
+    (triangles_with_aux: [](triangle, a)): [](triangle_slopes, a) =
 
-  let triangles = map (.triangle) triangles_coloured
+  let triangles = map (.0) triangles_with_aux
   let triangles_projected = map (project_triangle h w view_dist camera) triangles
 
   let close_enough_dist (p: point_projected): bool =
@@ -116,11 +116,11 @@ def project_triangles_in_view
      close_enough_dist triangle.2) &&
     ! (close_enough_fully_out_of_frame triangle)
 
-  let colours = map (.colour) triangles_coloured
-  let (triangles_projected', colours') =
-    unzip (filter (close_enough <-< (.0)) (zip triangles_projected colours))
+  let aux = map (.1) triangles_with_aux
+  let (triangles_projected', aux') =
+    unzip (filter (close_enough <-< (.0)) (zip triangles_projected aux))
   let triangles_slopes = prepare_triangles triangles_projected'
-  in zip triangles_slopes colours'
+  in zip triangles_slopes aux'
 
 -- | Render projected triangles using expand and reduce_by_index.
 def render_projected_triangles [n] 'a

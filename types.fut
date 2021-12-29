@@ -10,7 +10,6 @@ type base_component 'projected = {projected: projected, z: f32, world: vec3.vect
 type point_projected = base_component point_2d
 
 type triangle = (vec3.vector, vec3.vector, vec3.vector)
-type triangle_coloured 'colour = {triangle: triangle, colour: colour}
 type triangle_projected = (point_projected, point_projected, point_projected)
 
 type slope_point = base_component {x: i32}
