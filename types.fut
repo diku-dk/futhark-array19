@@ -38,12 +38,10 @@ type line = {n_points: i32,
              leftmost: line_component,
              step: line_component}
 
-type point_projected_1d = base_component {i: i32}
-
 type camera_base 'orientation = {position: vec3.vector, orientation: orientation}
 type camera = camera_base vec3.vector -- Euler angles
 type camera_quaternion = camera_base quaternion.quaternion
 
 type trig = {sin: vec3.vector, cos: vec3.vector}
 
-type^ pixel_color_function 'a = (point_projected_1d, a) -> argb.colour
+type^ pixel_color_function 'a = (base_component (), a) -> argb.colour

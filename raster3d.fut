@@ -144,33 +144,19 @@ def render_projected_triangles [n] 'a
   let points' = filter (\(p, _) ->
                           p.extra.x >= 0 && p.extra.x < i32.i64 w
                           && p.extra.y >=0 && p.extra.y < i32.i64 h) points
-  let indices = map (\(p, _) -> i64.i32 p.extra.y * w + i64.i32 p.extra.x) points'
-  let indices_2d = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
-  let points'' = map (\(p, aux) -> ({extra={i=p.extra.y * i32.i64 w + p.extra.x}, z=z_inv p.z,
+  let indices = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
+  let points'' = map (\(p, aux) -> ({extra=(), z=z_inv p.z,
                                      bary=p.bary}, aux)) points'
-  let empty = ({extra={i= -1}, z= -f32.inf,
+  let empty = ({extra=(), z= -f32.inf,
                 bary={u= -1, v= -1}}, aux_empty)
 
-  let z_check ((a, aux_a): (point_projected_1d, a))
-              ((b, aux_b): (point_projected_1d, a))
-              : (point_projected_1d, a) =
+  let z_check ((a, aux_a): (base_component (), a))
+              ((b, aux_b): (base_component (), a))
+              : (base_component (), a) =
     if (a.z >= 0 && a.z < b.z) || b.z < 0
     then (a, aux_a)
     else (b, aux_b)
 
-  let z_check_2d ((a, aux_a): (point_projected_1d, a))
-              ((b, aux_b): (point_projected_1d, a))
-              : (point_projected_1d, a) =
-    if (a.z >= 0 && a.z < b.z) || b.z < 0
-    then (a, aux_a)
-    else (b, aux_b)
-
-  let pixels_2d = replicate h (replicate w empty)
-  let p = reduce_by_index_2d pixels_2d z_check_2d empty indices_2d points''
-  in map (map pixel_color) p
-
-  -- let pixels = replicate (h * w) empty
-  -- -- FIXME: Use reduce_by_index_2d instead.
-  -- let pixels' = reduce_by_index pixels z_check empty indices points''
-  -- let pixels'' = map pixel_color pixels'
-  -- in unflatten h w pixels''
+  let pixels = replicate h (replicate w empty)
+  let pixels' = reduce_by_index_2d pixels z_check empty indices points''
+  in map (map pixel_color) pixels'
