@@ -11,9 +11,9 @@ type point_2d = {x: i32, y: i32}
 
 type barycentric = {u: f32, v: f32} -- w can be calculated in terms of u and v
 
-type base_component 'projected = {projected: projected, z: f32, bary: barycentric}
+type base_component 'extra = {extra: extra, z: f32, bary: barycentric}
 
-type point_projected = base_component {proj: point_2d, world: vec3.vector}
+type point_projected = base_component {projected: point_2d, world: vec3.vector}
 
 type point_projected_final = base_component point_2d
 

@@ -5,7 +5,7 @@ import "scanline"
 def bubble_point
     (a: point_projected)
     (b: point_projected): (point_projected, point_projected) =
-  if b.projected.proj.y < a.projected.proj.y then (b, a) else (a, b)
+  if b.extra.projected.y < a.extra.projected.y then (b, a) else (a, b)
 
 def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
   let (p, q) = bubble_point p q
@@ -89,12 +89,12 @@ def project_triangle
 
   let normalized = camera_normalize_triangle camera world
   -- The barycentric coordinates are properly set in prepare_triangles. Dummy
-  -- data until then.
-  in ({projected={proj=project_point normalized.0, world=world.0},
+  -- data until then. FIXME: Remove this necessity
+  in ({extra={projected=project_point normalized.0, world=world.0},
        z=normalized.0.z, bary={u= -1, v= -1}},
-      {projected={proj=project_point normalized.1, world=world.1},
+      {extra={projected=project_point normalized.1, world=world.1},
        z=normalized.1.z, bary={u= -1, v= -1}},
-      {projected={proj=project_point normalized.2, world=world.2},
+      {extra={projected=project_point normalized.2, world=world.2},
        z=normalized.2.z, bary={u= -1, v= -1}})
 
 -- | Project triangles currently visible from the camera.
@@ -114,10 +114,10 @@ def project_triangles_in_view 'a
 
   let close_enough_fully_out_of_frame
       ((p0, p1, p2): triangle_projected): bool =
-    (p0.projected.proj.x < 0 && p1.projected.proj.x < 0 && p2.projected.proj.x < 0) ||
-    (p0.projected.proj.x >= i32.i64 w && p1.projected.proj.x >= i32.i64 w && p2.projected.proj.x >= i32.i64 w) ||
-    (p0.projected.proj.y < 0 && p1.projected.proj.y < 0 && p2.projected.proj.y < 0) ||
-    (p0.projected.proj.y >= i32.i64 h && p1.projected.proj.y >= i32.i64 h && p2.projected.proj.y >= i32.i64 h)
+    (p0.extra.projected.x < 0 && p1.extra.projected.x < 0 && p2.extra.projected.x < 0) ||
+    (p0.extra.projected.x >= i32.i64 w && p1.extra.projected.x >= i32.i64 w && p2.extra.projected.x >= i32.i64 w) ||
+    (p0.extra.projected.y < 0 && p1.extra.projected.y < 0 && p2.extra.projected.y < 0) ||
+    (p0.extra.projected.y >= i32.i64 h && p1.extra.projected.y >= i32.i64 h && p2.extra.projected.y >= i32.i64 h)
 
   let close_enough (triangle: triangle_projected): bool =
     (close_enough_dist triangle.0 ||
@@ -142,12 +142,12 @@ def render_projected_triangles [n] 'a
   let lines = lines_of_triangles triangles_prepared aux
   let points = points_of_lines lines
   let points' = filter (\(p, _) ->
-                          p.projected.x >= 0 && p.projected.x < i32.i64 w
-                          && p.projected.y >=0 && p.projected.y < i32.i64 h) points
-  let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
-  let points'' = map (\(p, aux) -> ({projected={i=p.projected.y * i32.i64 w + p.projected.x}, z=z_inv p.z,
+                          p.extra.x >= 0 && p.extra.x < i32.i64 w
+                          && p.extra.y >=0 && p.extra.y < i32.i64 h) points
+  let indices = map (\(p, _) -> i64.i32 p.extra.y * w + i64.i32 p.extra.x) points'
+  let points'' = map (\(p, aux) -> ({extra={i=p.extra.y * i32.i64 w + p.extra.x}, z=z_inv p.z,
                                      bary=p.bary}, aux)) points'
-  let empty = ({projected={i= -1}, z= -f32.inf,
+  let empty = ({extra={i= -1}, z= -f32.inf,
                 bary={u= -1, v= -1}}, aux_empty)
 
   let z_check ((a, aux_a): (point_projected_1d, a))
