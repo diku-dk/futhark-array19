@@ -12,15 +12,14 @@ def z_inv (z: f32): f32 =
 def slope (a: point_projected) (b: point_projected): slope =
   let dy = b.extra.projected.y - a.extra.projected.y
   in if dy == 0
-     then {extra={x=0}, z=0, bary={u= -1, v= -1}}
+     then {extra={x=0}, bary={u= -1, v= -1}}
      else let dy' = r32 dy
           in {extra={x=r32 (b.extra.projected.x - a.extra.projected.x) / dy'},
-              z=(z_inv b.z - z_inv a.z) / dy',
               bary={u=(b.bary.u - a.bary.u) / dy',
                     v=(b.bary.v - a.bary.v) / dy'}}
 
 def neg_slope (s: slope): slope =
-  {extra={x= -s.extra.x}, z= -s.z,
+  {extra={x= -s.extra.x},
    bary={u= -s.bary.u, v= -s.bary.v}}
 
 def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
@@ -28,14 +27,11 @@ def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
    y=p.extra.projected.y,
    y_subtracted_p_y={q=q.extra.projected.y - p.extra.projected.y,
                      r=r.extra.projected.y - p.extra.projected.y},
-   p={extra={x=p.extra.projected.x, world={x=p.extra.world.x, y=p.extra.world.y, z=z_inv p.extra.world.z}},
-      z=z_inv p.z,
+   p={extra={x=p.extra.projected.x, world={x=p.extra.world.x, y=p.extra.world.y, z=z_inv p.extra.world.z}, z=z_inv p.extra.z},
       bary=p.bary},
-   q={extra={x=q.extra.projected.x, world={x=q.extra.world.x, y=q.extra.world.y, z=z_inv q.extra.world.z}},
-      z=z_inv q.z,
+   q={extra={x=q.extra.projected.x, world={x=q.extra.world.x, y=q.extra.world.y, z=z_inv q.extra.world.z}, z=z_inv q.extra.z},
       bary=q.bary},
-   r={extra={x=r.extra.projected.x, world={x=r.extra.world.x, y=r.extra.world.y, z=z_inv r.extra.world.z}},
-      z=z_inv r.z,
+   r={extra={x=r.extra.projected.x, world={x=r.extra.world.x, y=r.extra.world.y, z=z_inv r.extra.world.z}, z=z_inv r.extra.z},
       bary=r.bary},
    s1=slope p q,
    s2=slope p r,
@@ -49,8 +45,6 @@ def get_line_in_triangle 'a
   let half (p: slope_point) (s1: slope) (s2: slope) (i': f32): (line, a) =
     let x1 = p.extra.x + t32 (f32.round (s1.extra.x * i'))
     let x2 = p.extra.x + t32 (f32.round (s2.extra.x * i'))
-    let z1 = p.z + s1.z * i'
-    let z2 = p.z + s2.z * i'
     let bary_u1 = p.bary.u + s1.bary.u * i'
     let bary_u2 = p.bary.u + s2.bary.u * i'
     let bary_v1 = p.bary.v + s1.bary.v * i'
@@ -58,14 +52,13 @@ def get_line_in_triangle 'a
     let n_points = 1 + i32.abs (x2 - x1)
     let n_points' = r32 n_points
     let x = i32.sgn (x2 - x1)
-    let z = (z2 - z1) / n_points'
     let bary_u = (bary_u2 - bary_u1) / n_points'
     let bary_v = (bary_v2 - bary_v1) / n_points'
     in ({n_points,
          y,
-         leftmost = {extra={x=x1}, z=z1,
+         leftmost = {extra={x=x1},
                      bary={u=bary_u1, v=bary_v1}},
-         step = {extra={x=x}, z=z,
+         step = {extra={x=x},
                  bary={u=bary_u, v=bary_v}}},
          aux)
   in if i <= t.y_subtracted_p_y.q
@@ -83,8 +76,7 @@ def points_in_line 'a ((line, _): (line, a)): i64 =
 def get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected_final, a) =
   let i' = f32.i64 i
   in ({extra={x=l.leftmost.extra.x + l.step.extra.x * i32.i64 i,
-                  y=l.y},
-       z=l.leftmost.z + l.step.z * i',
+              y=l.y},
        bary={u=l.leftmost.bary.u + l.step.bary.u * i',
              v=l.leftmost.bary.v + l.step.bary.v * i'}},
    aux)

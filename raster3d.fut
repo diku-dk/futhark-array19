@@ -1,6 +1,7 @@
 import "lib/github.com/athas/matte/colour"
 import "types"
 import "scanline"
+import "barycentric"
 
 def bubble_point
     (a: point_projected)
@@ -90,12 +91,12 @@ def project_triangle
   let normalized = camera_normalize_triangle camera world
   -- The barycentric coordinates are properly set in prepare_triangles. Dummy
   -- data until then. FIXME: Remove this necessity
-  in ({extra={projected=project_point normalized.0, world=world.0},
-       z=normalized.0.z, bary={u= -1, v= -1}},
-      {extra={projected=project_point normalized.1, world=world.1},
-       z=normalized.1.z, bary={u= -1, v= -1}},
-      {extra={projected=project_point normalized.2, world=world.2},
-       z=normalized.2.z, bary={u= -1, v= -1}})
+  in ({extra={projected=project_point normalized.0, world=world.0, z=normalized.0.z},
+       bary={u= -1, v= -1}},
+      {extra={projected=project_point normalized.1, world=world.1, z=normalized.1.z},
+       bary={u= -1, v= -1}},
+      {extra={projected=project_point normalized.2, world=world.2, z=normalized.2.z},
+       bary={u= -1, v= -1}})
 
 -- | Project triangles currently visible from the camera.
 def project_triangles_in_view 'a
@@ -110,7 +111,7 @@ def project_triangles_in_view 'a
   let triangles_projected = map (project_triangle (f32.i64 h / 2) (f32.i64 w / 2) view_dist camera) triangles
 
   let close_enough_dist (p: point_projected): bool =
-    0.0 <= p.z && p.z < draw_dist
+    0.0 <= p.extra.z && p.extra.z < draw_dist
 
   let close_enough_fully_out_of_frame
       ((p0, p1, p2): triangle_projected): bool =
@@ -146,15 +147,16 @@ def render_projected_triangles [n] 'a
                           p.extra.x >= 0 && p.extra.x < i32.i64 w
                           && p.extra.y >=0 && p.extra.y < i32.i64 h) points
   let indices = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
-  let points'' = map (\(p, (aux_internal, aux)) -> ({extra=aux_internal, z=z_inv p.z,
-                                     bary=p.bary}, aux)) points'
-  let empty = ({extra= -1, z= -f32.inf,
+  let points'' = map (\(p, (aux_internal, aux)) -> ({extra={i=aux_internal,
+                                                            z=z_inv (interpolate p.bary triangles_prepared[aux_internal] (.extra.z))},
+                                                     bary=p.bary}, aux)) points'
+  let empty = ({extra={i= -1, z= -f32.inf},
                 bary={u= -1, v= -1}}, aux_empty)
 
-  let z_check ((a, aux_a): (base_component i32, a))
-              ((b, aux_b): (base_component i32, a))
-              : (base_component i32, a) =
-    if (a.z >= 0 && a.z < b.z) || b.z < 0
+  let z_check ((a, aux_a): (pixel_final, a))
+              ((b, aux_b): (pixel_final, a))
+              : (pixel_final, a) =
+    if (a.extra.z >= 0 && a.extra.z < b.extra.z) || b.extra.z < 0
     then (a, aux_a)
     else (b, aux_b)
 
