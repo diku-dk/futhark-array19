@@ -15,7 +15,11 @@ def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projecte
 
 def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
   map normalize_triangle_points triangles
-  |> map (\triangle -> triangle_slopes triangle)
+  |> map (\(triangle: triangle_projected) -> triangle with 0.bary = {x=1, y=0, z=0}
+                                                      with 1.bary = {x=0, y=1, z=0}
+                                                      with 2.bary = {x=0, y=0, z=1})
+  |> map triangle_slopes
+
 
 def rotate_x ({sin, cos}: trig)
              ({x, y, z}: vec3.vector): vec3.vector =
@@ -84,9 +88,12 @@ def project_triangle
     in {x=t32 (f32.round x_projected), y=t32 (f32.round y_projected)}
 
   let normalized = camera_normalize_triangle camera world
-  in ({projected=project_point normalized.0, world=world.0, z=normalized.0.z},
-      {projected=project_point normalized.1, world=world.1, z=normalized.1.z},
-      {projected=project_point normalized.2, world=world.2, z=normalized.2.z})
+  in ({projected=project_point normalized.0, z=normalized.0.z,
+       world=world.0, bary={x=1, y=0, z=0}}, -- fixme bary vec.zero
+      {projected=project_point normalized.1, z=normalized.1.z,
+       world=world.1, bary={x=0, y=1, z=0}},
+      {projected=project_point normalized.2, z=normalized.2.z,
+       world=world.2, bary={x=0, y=0, z=1}})
 
 -- | Project triangles currently visible from the camera.
 def project_triangles_in_view 'a
@@ -137,8 +144,11 @@ def render_projected_triangles [n] 'a
                           && p.projected.y >=0 && p.projected.y < i32.i64 h) points
   let indices = map (\(p, _) -> i64.i32 p.projected.y * w + i64.i32 p.projected.x) points'
   let points'' = map (\(p, aux) -> ({projected={i=p.projected.y * i32.i64 w + p.projected.x}, z=z_inv p.z,
-                                     world={x=p.world.x, y=p.world.y, z=z_inv p.world.z}}, aux)) points'
-  let empty = ({projected={i= -1}, z= -f32.inf, world={x= -f32.inf, y= -f32.inf, z= -f32.inf}}, aux_empty)
+                                     world={x=p.world.x, y=p.world.y, z=z_inv p.world.z},
+                                     bary=p.bary}, aux)) points'
+  let empty = ({projected={i= -1}, z= -f32.inf,
+                world={x= -f32.inf, y= -f32.inf, z= -f32.inf},
+                bary=vec3.zero}, aux_empty)
 
   let z_check ((a, aux_a): (point_projected_1d, a))
               ((b, aux_b): (point_projected_1d, a))

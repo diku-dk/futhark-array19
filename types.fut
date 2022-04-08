@@ -9,7 +9,7 @@ module qe_conversions = mk_quaternion_euler_conversions f32
 
 type point_2d = {x: i32, y: i32}
 
-type base_component 'projected = {projected: projected, z: f32, world: vec3.vector}
+type base_component 'projected = {projected: projected, z: f32, world: vec3.vector, bary: vec3.vector}
 
 type point_projected = base_component point_2d
 
@@ -23,6 +23,7 @@ type triangle_slopes = {n_lines: i32,
                         y_subtracted_p_y: {q: i32, r: i32},
                         p: slope_point,
                         r: slope_point,
+                        q: slope_point,
                         s1: slope,
                         s2: slope,
                         s3: slope}
