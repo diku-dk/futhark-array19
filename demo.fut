@@ -120,7 +120,7 @@ module lys: lys with text_content = text_content = {
         let h = if aux == empty_aux
                 then 0
                 else let t = ts[aux]
-                     let world_y = interpolate p.bary t (.world.y)
+                     let world_y = interpolate p.bary t (.projected.world.y)
                      let f = (world_y - y_min) / y_span
                      in 360 * f
         in hsv_to_rgb (h, 1 - pixel_depth draw_dist p.z, 0.5)

@@ -4,43 +4,38 @@ import "types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
+-- fixme use 'lerp'
+
 def z_inv (z: f32): f32 =
   1 / z
 
 def slope (a: point_projected) (b: point_projected): slope =
-  let dy = b.projected.y - a.projected.y
+  let dy = b.projected.proj.y - a.projected.proj.y
   in if dy == 0
-     then {projected={x=0}, z=0, world=vec3.zero, bary={u= -1, v= -1}}
+     then {projected={x=0}, z=0, bary={u= -1, v= -1}}
      else let dy' = r32 dy
-          in {projected={x=r32 (b.projected.x - a.projected.x) / dy'},
+          in {projected={x=r32 (b.projected.proj.x - a.projected.proj.x) / dy'},
               z=(z_inv b.z - z_inv a.z) / dy',
-              world={x=(b.world.x - a.world.x) / dy',
-                     y=(b.world.y - a.world.y) / dy',
-                     z=(z_inv b.world.z - z_inv a.world.z) / dy'},
               bary={u=(b.bary.u - a.bary.u) / dy',
                     v=(b.bary.v - a.bary.v) / dy'}}
 
 def neg_slope (s: slope): slope =
   {projected={x= -s.projected.x}, z= -s.z,
-   world={x= -s.world.x, y= -s.world.y, z= -s.world.z},
    bary={u= -s.bary.u, v= -s.bary.v}}
 
 def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
-  {n_lines=r.projected.y - p.projected.y + 1,
-   y=p.projected.y,
-   y_subtracted_p_y={q=q.projected.y - p.projected.y,
-                     r=r.projected.y - p.projected.y},
-   p={projected={x=p.projected.x},
+  {n_lines=r.projected.proj.y - p.projected.proj.y + 1,
+   y=p.projected.proj.y,
+   y_subtracted_p_y={q=q.projected.proj.y - p.projected.proj.y,
+                     r=r.projected.proj.y - p.projected.proj.y},
+   p={projected={x=p.projected.proj.x, world={x=p.projected.world.x, y=p.projected.world.y, z=z_inv p.projected.world.z}},
       z=z_inv p.z,
-      world={x=p.world.x, y=p.world.y, z=z_inv p.world.z},
       bary=p.bary},
-   q={projected={x=q.projected.x},
+   q={projected={x=q.projected.proj.x, world={x=q.projected.world.x, y=q.projected.world.y, z=z_inv q.projected.world.z}},
       z=z_inv q.z,
-      world={x=q.world.x, y=q.world.y, z=z_inv q.world.z},
       bary=q.bary},
-   r={projected={x=r.projected.x},
+   r={projected={x=r.projected.proj.x, world={x=r.projected.world.x, y=r.projected.world.y, z=z_inv r.projected.world.z}},
       z=z_inv r.z,
-      world={x=r.world.x, y=r.world.y, z=z_inv r.world.z},
       bary=r.bary},
    s1=slope p q,
    s2=slope p r,
@@ -56,12 +51,6 @@ def get_line_in_triangle 'a
     let x2 = p.projected.x + t32 (f32.round (s2.projected.x * i'))
     let z1 = p.z + s1.z * i'
     let z2 = p.z + s2.z * i'
-    let world_x1 = p.world.x + s1.world.x * i'
-    let world_x2 = p.world.x + s2.world.x * i'
-    let world_y1 = p.world.y + s1.world.y * i'
-    let world_y2 = p.world.y + s2.world.y * i'
-    let world_z1 = p.world.z + s1.world.z * i'
-    let world_z2 = p.world.z + s2.world.z * i'
     let bary_u1 = p.bary.u + s1.bary.u * i'
     let bary_u2 = p.bary.u + s2.bary.u * i'
     let bary_v1 = p.bary.v + s1.bary.v * i'
@@ -70,18 +59,13 @@ def get_line_in_triangle 'a
     let n_points' = r32 n_points
     let x = i32.sgn (x2 - x1)
     let z = (z2 - z1) / n_points'
-    let world_x = (world_x2 - world_x1) / n_points'
-    let world_y = (world_y2 - world_y1) / n_points'
-    let world_z = (world_z2 - world_z1) / n_points'
     let bary_u = (bary_u2 - bary_u1) / n_points'
     let bary_v = (bary_v2 - bary_v1) / n_points'
     in ({n_points,
          y,
          leftmost = {projected={x=x1}, z=z1,
-                     world={x=world_x1, y=world_y1, z=world_z1},
                      bary={u=bary_u1, v=bary_v1}},
          step = {projected={x=x}, z=z,
-                 world={x=world_x, y=world_y, z=world_z},
                  bary={u=bary_u, v=bary_v}}},
          aux)
   in if i <= t.y_subtracted_p_y.q
@@ -96,17 +80,14 @@ def lines_of_triangles 'a [n]
 def points_in_line 'a ((line, _): (line, a)): i64 =
   i64.i32 line.n_points
 
-def get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected, a) =
+def get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected_final, a) =
   let i' = f32.i64 i
   in ({projected={x=l.leftmost.projected.x + l.step.projected.x * i32.i64 i,
                   y=l.y},
        z=l.leftmost.z + l.step.z * i',
-       world={x=l.leftmost.world.x + l.step.world.x * i',
-              y=l.leftmost.world.y + l.step.world.y * i',
-              z=l.leftmost.world.z + l.step.world.z * i'},
        bary={u=l.leftmost.bary.u + l.step.bary.u * i',
              v=l.leftmost.bary.v + l.step.bary.v * i'}},
    aux)
 
-def points_of_lines 'a (lines: [](line, a)): [](point_projected, a) =
+def points_of_lines 'a (lines: [](line, a)): [](point_projected_final, a) =
   expand points_in_line get_point_in_line lines
