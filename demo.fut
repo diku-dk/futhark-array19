@@ -117,7 +117,7 @@ module lys: lys with text_content = text_content = {
       def triangles_aux [n] (_: [n]triangle_slopes): [n]i64 = 0..<n
       def pixel_color (y_min: f32) (y_span: f32) (draw_dist: f32) (ts: []triangle_slopes) ((p, aux): (point_projected_1d, i64)): argb.colour =
         if aux == empty_aux
-        then argb.black
+        then hsv_to_rgb (0, 1 - pixel_depth draw_dist p.z, 0.5)
         else let t = ts[aux]
              let world_y = p.bary.x * t.p.world.y + p.bary.y * t.q.world.y + p.bary.z * t.r.world.y
              -- let world_y = p.bary.x * t.p.world.y -- + p.bary.y * t.q.world.y + p.bary.z * t.r.world.y
