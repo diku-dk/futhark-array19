@@ -21,7 +21,6 @@ def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes
                                                       with 2.bary = {u=0, v=0})
   |> map triangle_slopes
 
-
 def rotate_x ({sin, cos}: trig)
              ({x, y, z}: vec3.vector): vec3.vector =
   {x,

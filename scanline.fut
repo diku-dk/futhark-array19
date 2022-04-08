@@ -4,8 +4,6 @@ import "types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
--- fixme use 'lerp'
-
 def z_inv (z: f32): f32 =
   1 / z
 
@@ -45,10 +43,10 @@ def get_line_in_triangle 'a
   let half (p: slope_point) (s1: slope) (s2: slope) (i': f32): (line, a) =
     let x1 = p.extra.x + t32 (f32.round (s1.extra.x * i'))
     let x2 = p.extra.x + t32 (f32.round (s2.extra.x * i'))
-    let bary_u1 = p.bary.u + s1.bary.u * i'
-    let bary_u2 = p.bary.u + s2.bary.u * i'
-    let bary_v1 = p.bary.v + s1.bary.v * i'
-    let bary_v2 = p.bary.v + s2.bary.v * i'
+    let bary_u1 = f32.mad s1.bary.u i' p.bary.u
+    let bary_u2 = f32.mad s2.bary.u i' p.bary.u
+    let bary_v1 = f32.mad s1.bary.v i' p.bary.v
+    let bary_v2 = f32.mad s2.bary.v i' p.bary.v
     let n_points = 1 + i32.abs (x2 - x1)
     let n_points' = r32 n_points
     let x = i32.sgn (x2 - x1)
