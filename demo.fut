@@ -1,6 +1,7 @@
 import "lib/github.com/diku-dk/lys/lys"
 import "types"
 import "raster3d"
+import "barycentric"
 import "terrain"
 import "hsv"
 
@@ -119,8 +120,7 @@ module lys: lys with text_content = text_content = {
         let h = if aux == empty_aux
                 then 0
                 else let t = ts[aux]
-                     let p_bary_w = 1 - p.bary.u - p.bary.v
-                     let world_y = p.bary.u * t.p.world.y + p.bary.v * t.q.world.y + p_bary_w * t.r.world.y
+                     let world_y = interpolate p.bary t (.world.y)
                      let f = (world_y - y_min) / y_span
                      in 360 * f
         in hsv_to_rgb (h, 1 - pixel_depth draw_dist p.z, 0.5)
