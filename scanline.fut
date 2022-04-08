@@ -10,24 +10,22 @@ def z_inv (z: f32): f32 =
 def slope (a: point_projected) (b: point_projected): slope =
   let dy = b.projected.y - a.projected.y
   in if dy == 0
-     then {projected={x=0}, z=0, world=vec3.zero, bary=vec3.zero}
+     then {projected={x=0}, z=0, world=vec3.zero, bary={u= -1, v= -1}}
      else let dy' = r32 dy
           in {projected={x=r32 (b.projected.x - a.projected.x) / dy'},
               z=(z_inv b.z - z_inv a.z) / dy',
               world={x=(b.world.x - a.world.x) / dy',
                      y=(b.world.y - a.world.y) / dy',
                      z=(z_inv b.world.z - z_inv a.world.z) / dy'},
-              bary={x=(b.bary.x - a.bary.x) / dy',
-                    y=(b.bary.y - a.bary.y) / dy',
-                    z=(b.bary.z - a.bary.z) / dy'}}
+              bary={u=(b.bary.u - a.bary.u) / dy',
+                    v=(b.bary.v - a.bary.v) / dy'}}
 
 def neg_slope (s: slope): slope =
   {projected={x= -s.projected.x}, z= -s.z,
    world={x= -s.world.x, y= -s.world.y, z= -s.world.z},
-   bary={x= -s.bary.x, y= -s.bary.y, z= -s.bary.z}}
+   bary={u= -s.bary.u, v= -s.bary.v}}
 
 def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
---  let q = if q.projected.x < r.projected.x then q else q with bary = vec3.zero vec3.- q.bary in
   {n_lines=r.projected.y - p.projected.y + 1,
    y=p.projected.y,
    y_subtracted_p_y={q=q.projected.y - p.projected.y,
@@ -64,12 +62,10 @@ def get_line_in_triangle 'a
     let world_y2 = p.world.y + s2.world.y * i'
     let world_z1 = p.world.z + s1.world.z * i'
     let world_z2 = p.world.z + s2.world.z * i'
-    let bary_x1 = p.bary.x + s1.bary.x * i'
-    let bary_x2 = p.bary.x + s2.bary.x * i'
-    let bary_y1 = p.bary.y + s1.bary.y * i'
-    let bary_y2 = p.bary.y + s2.bary.y * i'
-    let bary_z1 = p.bary.z + s1.bary.z * i'
-    let bary_z2 = p.bary.z + s2.bary.z * i'
+    let bary_u1 = p.bary.u + s1.bary.u * i'
+    let bary_u2 = p.bary.u + s2.bary.u * i'
+    let bary_v1 = p.bary.v + s1.bary.v * i'
+    let bary_v2 = p.bary.v + s2.bary.v * i'
     let n_points = 1 + i32.abs (x2 - x1)
     let n_points' = r32 n_points
     let x = i32.sgn (x2 - x1)
@@ -77,17 +73,16 @@ def get_line_in_triangle 'a
     let world_x = (world_x2 - world_x1) / n_points'
     let world_y = (world_y2 - world_y1) / n_points'
     let world_z = (world_z2 - world_z1) / n_points'
-    let bary_x = (bary_x2 - bary_x1) / n_points'
-    let bary_y = (bary_y2 - bary_y1) / n_points'
-    let bary_z = (bary_z2 - bary_z1) / n_points'
+    let bary_u = (bary_u2 - bary_u1) / n_points'
+    let bary_v = (bary_v2 - bary_v1) / n_points'
     in ({n_points,
          y,
          leftmost = {projected={x=x1}, z=z1,
                      world={x=world_x1, y=world_y1, z=world_z1},
-                     bary={x=bary_x1, y=bary_y1, z=bary_z1}},
+                     bary={u=bary_u1, v=bary_v1}},
          step = {projected={x=x}, z=z,
                  world={x=world_x, y=world_y, z=world_z},
-                 bary={x=bary_x, y=bary_y, z=bary_z}}},
+                 bary={u=bary_u, v=bary_v}}},
          aux)
   in if i <= t.y_subtracted_p_y.q
      then half t.p t.s1 t.s2 (r32 i) -- upper half
@@ -109,9 +104,8 @@ def get_point_in_line 'a ((l, aux): (line, a)) (i: i64): (point_projected, a) =
        world={x=l.leftmost.world.x + l.step.world.x * i',
               y=l.leftmost.world.y + l.step.world.y * i',
               z=l.leftmost.world.z + l.step.world.z * i'},
-       bary={x=l.leftmost.bary.x + l.step.bary.x * i',
-             y=l.leftmost.bary.y + l.step.bary.y * i',
-             z=l.leftmost.bary.z + l.step.bary.z * i'}},
+       bary={u=l.leftmost.bary.u + l.step.bary.u * i',
+             v=l.leftmost.bary.v + l.step.bary.v * i'}},
    aux)
 
 def points_of_lines 'a (lines: [](line, a)): [](point_projected, a) =

@@ -15,9 +15,9 @@ def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projecte
 
 def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
   map normalize_triangle_points triangles
-  |> map (\(triangle: triangle_projected) -> triangle with 0.bary = {x=1, y=0, z=0}
-                                                      with 1.bary = {x=0, y=1, z=0}
-                                                      with 2.bary = {x=0, y=0, z=1})
+  |> map (\(triangle: triangle_projected) -> triangle with 0.bary = {u=1, v=0}
+                                                      with 1.bary = {u=0, v=1}
+                                                      with 2.bary = {u=0, v=0})
   |> map triangle_slopes
 
 
@@ -88,12 +88,14 @@ def project_triangle
     in {x=t32 (f32.round x_projected), y=t32 (f32.round y_projected)}
 
   let normalized = camera_normalize_triangle camera world
+  -- The barycentric coordinates are properly set in prepare_triangles. Dummy
+  -- data until then.
   in ({projected=project_point normalized.0, z=normalized.0.z,
-       world=world.0, bary={x=1, y=0, z=0}}, -- fixme bary vec.zero
+       world=world.0, bary={u= -1, v= -1}},
       {projected=project_point normalized.1, z=normalized.1.z,
-       world=world.1, bary={x=0, y=1, z=0}},
+       world=world.1, bary={u= -1, v= -1}},
       {projected=project_point normalized.2, z=normalized.2.z,
-       world=world.2, bary={x=0, y=0, z=1}})
+       world=world.2, bary={u= -1, v= -1}})
 
 -- | Project triangles currently visible from the camera.
 def project_triangles_in_view 'a
@@ -148,7 +150,7 @@ def render_projected_triangles [n] 'a
                                      bary=p.bary}, aux)) points'
   let empty = ({projected={i= -1}, z= -f32.inf,
                 world={x= -f32.inf, y= -f32.inf, z= -f32.inf},
-                bary=vec3.zero}, aux_empty)
+                bary={u= -1, v= -1}}, aux_empty)
 
   let z_check ((a, aux_a): (point_projected_1d, a))
               ((b, aux_b): (point_projected_1d, a))

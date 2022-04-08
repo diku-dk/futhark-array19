@@ -9,7 +9,9 @@ module qe_conversions = mk_quaternion_euler_conversions f32
 
 type point_2d = {x: i32, y: i32}
 
-type base_component 'projected = {projected: projected, z: f32, world: vec3.vector, bary: vec3.vector}
+type barycentric = {u: f32, v: f32} -- w can be calculated in terms of u and v
+
+type base_component 'projected = {projected: projected, z: f32, world: vec3.vector, bary: barycentric}
 
 type point_projected = base_component point_2d
 
