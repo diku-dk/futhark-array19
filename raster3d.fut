@@ -139,20 +139,21 @@ def render_projected_triangles [n] 'a
     (pixel_color: pixel_color_function a)
     (aux: [n]a)
     (aux_empty: a): [h][w]argb.colour =
-  let lines = lines_of_triangles triangles_prepared aux
+  let aux' = zip (map i32.i64 (0..<n)) aux
+  let lines = lines_of_triangles triangles_prepared aux'
   let points = points_of_lines lines
   let points' = filter (\(p, _) ->
                           p.extra.x >= 0 && p.extra.x < i32.i64 w
                           && p.extra.y >=0 && p.extra.y < i32.i64 h) points
   let indices = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
-  let points'' = map (\(p, aux) -> ({extra=(), z=z_inv p.z,
+  let points'' = map (\(p, (aux_internal, aux)) -> ({extra=aux_internal, z=z_inv p.z,
                                      bary=p.bary}, aux)) points'
-  let empty = ({extra=(), z= -f32.inf,
+  let empty = ({extra= -1, z= -f32.inf,
                 bary={u= -1, v= -1}}, aux_empty)
 
-  let z_check ((a, aux_a): (base_component (), a))
-              ((b, aux_b): (base_component (), a))
-              : (base_component (), a) =
+  let z_check ((a, aux_a): (base_component i32, a))
+              ((b, aux_b): (base_component i32, a))
+              : (base_component i32, a) =
     if (a.z >= 0 && a.z < b.z) || b.z < 0
     then (a, aux_a)
     else (b, aux_b)

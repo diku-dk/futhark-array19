@@ -101,25 +101,25 @@ module lys: lys with text_content = text_content = {
       type aux = argb.colour
       def empty_aux = argb.white
       def triangles_aux colors = colors
-      def pixel_color ((_p, color): (base_component (), argb.colour)): argb.colour = color
+      def pixel_color ((_p, color): (base_component i32, argb.colour)): argb.colour = color
     }
 
     module by_depth = {
       type aux = ()
       def empty_aux = ()
       def triangles_aux [n] (_: [n]triangle_slopes): [n]() = replicate n ()
-      def pixel_color (draw_dist: f32) ((p, _aux): (base_component (), ())): argb.colour =
+      def pixel_color (draw_dist: f32) ((p, _aux): (base_component i32, ())): argb.colour =
         argb.gray (pixel_depth draw_dist p.z)
     }
 
     module by_height = {
       type aux = triangle_slopes
-      def empty_aux: i64 = -1
-      def triangles_aux [n] (_: [n]triangle_slopes): [n]i64 = 0..<n
-      def pixel_color (y_min: f32) (y_span: f32) (draw_dist: f32) (ts: []triangle_slopes) ((p, aux): (base_component (), i64)): argb.colour =
-        let h = if aux == empty_aux
+      def empty_aux = ()
+      def triangles_aux [n] (_: [n]triangle_slopes): [n]() = replicate n ()
+      def pixel_color (y_min: f32) (y_span: f32) (draw_dist: f32) (ts: []triangle_slopes) ((p, _aux): (base_component i32, ())): argb.colour =
+        let h = if p.extra == -1
                 then 0
-                else let t = ts[aux]
+                else let t = ts[p.extra]
                      let world_y = interpolate p.bary t (.extra.world.y)
                      let f = (world_y - y_min) / y_span
                      in 360 * f

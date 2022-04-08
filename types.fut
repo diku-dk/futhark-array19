@@ -44,4 +44,4 @@ type camera_quaternion = camera_base quaternion.quaternion
 
 type trig = {sin: vec3.vector, cos: vec3.vector}
 
-type^ pixel_color_function 'a = (base_component (), a) -> argb.colour
+type^ pixel_color_function 'a = (base_component i32, a) -> argb.colour
