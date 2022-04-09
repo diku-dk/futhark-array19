@@ -143,8 +143,8 @@ def render_projected_triangles [n] 'a
   let points =
     lines_of_triangles triangles_prepared aux'
     |> points_of_lines
-    |> filter (\(p, _) ->
-                 let (x, y) = (p.extra.x, p.extra.y)
+    |> filter (\(p, (aux_internal, _)) ->
+                 let {x, y} = p.extra
                  in x >= 0 && x < i32.i64 w
                     && y >=0 && y < i32.i64 h)
   let coordinates =
