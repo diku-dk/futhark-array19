@@ -1,11 +1,8 @@
 import "lib/github.com/diku-dk/segmented/segmented"
-import "types"
+import "raster_types"
 
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
-
-def z_inv (z: f32): f32 =
-  1 / z
 
 def slope (a: point_projected) (b: point_projected): slope =
   let dy = b.extra.projected.y - a.extra.projected.y
@@ -25,11 +22,11 @@ def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
    y=p.extra.projected.y,
    y_subtracted_p_y={q=q.extra.projected.y - p.extra.projected.y,
                      r=r.extra.projected.y - p.extra.projected.y},
-   p={extra={x=p.extra.projected.x, world={x=p.extra.world.x, y=p.extra.world.y, z=z_inv p.extra.world.z}, z=z_inv p.extra.z},
+   p={extra={x=p.extra.projected.x, world=p.extra.world, z_inv=1 / p.extra.z},
       bary=p.bary},
-   q={extra={x=q.extra.projected.x, world={x=q.extra.world.x, y=q.extra.world.y, z=z_inv q.extra.world.z}, z=z_inv q.extra.z},
+   q={extra={x=q.extra.projected.x, world=q.extra.world, z_inv=1 / q.extra.z},
       bary=q.bary},
-   r={extra={x=r.extra.projected.x, world={x=r.extra.world.x, y=r.extra.world.y, z=z_inv r.extra.world.z}, z=z_inv r.extra.z},
+   r={extra={x=r.extra.projected.x, world=r.extra.world, z_inv=1 / r.extra.z},
       bary=r.bary},
    s1=slope p q,
    s2=slope p r,

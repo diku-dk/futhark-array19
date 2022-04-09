@@ -1,5 +1,6 @@
 import "lib/github.com/diku-dk/lys/lys"
 import "types"
+import "raster_types"
 import "raster3d"
 import "barycentric"
 import "terrain"

@@ -1,5 +1,5 @@
 import "lib/github.com/athas/matte/colour"
-import "types"
+import "raster_types"
 import "scanline"
 import "barycentric"
 
@@ -140,14 +140,13 @@ def render_projected_triangles [n] 'a
     (aux: [n]a)
     (aux_empty: a): [h][w]argb.colour =
   let aux' = zip (map i32.i64 (0..<n)) aux
-  let lines = lines_of_triangles triangles_prepared aux'
-  let points = points_of_lines lines
+  let points = lines_of_triangles triangles_prepared aux' |> points_of_lines
   let points' = filter (\(p, _) ->
                           p.extra.x >= 0 && p.extra.x < i32.i64 w
                           && p.extra.y >=0 && p.extra.y < i32.i64 h) points
   let indices = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
   let points'' = map (\(p, (aux_internal, aux)) -> ({extra={i=aux_internal,
-                                                            z=z_inv (interpolate p.bary triangles_prepared[aux_internal] (.extra.z))},
+                                                            z=1 / (interpolate p.bary triangles_prepared[aux_internal] (.extra.z_inv))},
                                                      bary=p.bary}, aux)) points'
   let empty = ({extra={i= -1, z= -f32.inf},
                 bary={u= -1, v= -1}}, aux_empty)
