@@ -140,16 +140,19 @@ def render_projected_triangles [n] 'a
     (aux: [n]a)
     (aux_empty: a): [h][w]argb.colour =
   let aux' = zip (map i32.i64 (0..<n)) aux
-  let points = lines_of_triangles triangles_prepared aux' |> points_of_lines
-  let points' = filter (\(p, _) ->
-                          p.extra.x >= 0 && p.extra.x < i32.i64 w
-                          && p.extra.y >=0 && p.extra.y < i32.i64 h) points
-  let indices = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points'
-  let points'' = map (\(p, (aux_internal, aux)) -> ({extra={i=aux_internal,
-                                                            z=1 / (interpolate p.bary triangles_prepared[aux_internal] (.extra.z_inv))},
-                                                     bary=p.bary}, aux)) points'
-  let empty = ({extra={i= -1, z= -f32.inf},
-                bary={u= -1, v= -1}}, aux_empty)
+  let points = lines_of_triangles triangles_prepared aux'
+               |> points_of_lines
+               |> filter (\(p, _) ->
+                            let (x, y) = (p.extra.x, p.extra.y)
+                            in x >= 0 && x < i32.i64 w
+                               && y >=0 && y < i32.i64 h)
+  let coordinates = map (\(p, _) -> (i64.i32 p.extra.y, i64.i32 p.extra.x)) points
+  let points'' = map (\(p, (aux_internal, aux)) ->
+                        let z_inv = interpolate p.bary triangles_prepared[aux_internal] (.extra.z_inv)
+                        let p' = {extra={i=aux_internal, z=1 / z_inv},
+                                  bary=p.bary}
+                        in (p', aux))
+                     points
 
   let z_check ((a, aux_a): (pixel_final, a))
               ((b, aux_b): (pixel_final, a))
@@ -158,6 +161,9 @@ def render_projected_triangles [n] 'a
     then (a, aux_a)
     else (b, aux_b)
 
+  let empty = ({extra={i= -1, z= -f32.inf},
+                bary={u= -1, v= -1}}, aux_empty)
+
   let pixels = replicate h (replicate w empty)
-  let pixels' = reduce_by_index_2d pixels z_check empty indices points''
+  let pixels' = reduce_by_index_2d pixels z_check empty coordinates points''
   in map (map pixel_color) pixels'
