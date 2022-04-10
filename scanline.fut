@@ -4,7 +4,7 @@ import "raster_types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
-def slope (a: point_projected) (b: point_projected): slope =
+def slope (a: point_projected_with_bary) (b: point_projected_with_bary): slope =
   let dy = b.extra.projected.y - a.extra.projected.y
   in if dy == 0
      then {extra={x=0}, bary={u= -1, v= -1}}
@@ -17,7 +17,7 @@ def neg_slope (s: slope): slope =
   {extra={x= -s.extra.x},
    bary={u= -s.bary.u, v= -s.bary.v}}
 
-def triangle_slopes ((p, q, r): triangle_projected): triangle_slopes =
+def triangle_slopes ((p, q, r): triangle_projected_with_bary): triangle_slopes =
   {n_lines=r.extra.projected.y - p.extra.projected.y + 1,
    y=p.extra.projected.y,
    y_subtracted_p_y={q=q.extra.projected.y - p.extra.projected.y,

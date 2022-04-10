@@ -9,12 +9,16 @@ type barycentric = {u: f32, v: f32} -- w can be calculated in terms of u and v
 
 type base_component 'extra = {extra: extra, bary: barycentric}
 
-type point_projected = base_component {projected: point_2d, z: f32, world: vec3.vector}
+type point_projected = {projected: point_2d, z: f32, world: vec3.vector}
+type point_projected_with_bary = base_component {projected: point_2d, z: f32, world: vec3.vector}
 
 type point_projected_final = base_component point_2d
 
 type triangle = (vec3.vector, vec3.vector, vec3.vector)
-type triangle_projected = (point_projected, point_projected, point_projected)
+type triangle_projected =
+  (point_projected, point_projected, point_projected)
+type triangle_projected_with_bary =
+  (point_projected_with_bary, point_projected_with_bary, point_projected_with_bary)
 
 type slope_point = base_component {x: i32, z_inv: f32, world: vec3.vector}
 type slope = base_component {x: f32}

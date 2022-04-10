@@ -6,7 +6,7 @@ import "barycentric"
 def bubble_point
     (a: point_projected)
     (b: point_projected): (point_projected, point_projected) =
-  if b.extra.projected.y < a.extra.projected.y then (b, a) else (a, b)
+  if b.projected.y < a.projected.y then (b, a) else (a, b)
 
 def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
   let (p, q) = bubble_point p q
@@ -16,9 +16,10 @@ def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projecte
 
 def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
   map normalize_triangle_points triangles
-  |> map (\(triangle: triangle_projected) -> triangle with 0.bary = {u=1, v=0}
-                                                      with 1.bary = {u=0, v=1}
-                                                      with 2.bary = {u=0, v=0})
+  |> map (\(triangle: triangle_projected) ->
+            ({bary={u=1, v=0}, extra=triangle.0},
+             {bary={u=0, v=1}, extra=triangle.1},
+             {bary={u=0, v=0}, extra=triangle.2}))
   |> map triangle_slopes
 
 def rotate_x ({sin, cos}: trig)
@@ -88,14 +89,9 @@ def project_triangle
     in {x=t32 (f32.round x_projected), y=t32 (f32.round y_projected)}
 
   let normalized = camera_normalize_triangle camera world
-  -- The barycentric coordinates are properly set in prepare_triangles. Dummy
-  -- data until then. FIXME: Remove this necessity
-  in ({extra={projected=project_point normalized.0, world=world.0, z=normalized.0.z},
-       bary={u= -1, v= -1}},
-      {extra={projected=project_point normalized.1, world=world.1, z=normalized.1.z},
-       bary={u= -1, v= -1}},
-      {extra={projected=project_point normalized.2, world=world.2, z=normalized.2.z},
-       bary={u= -1, v= -1}})
+  in ({projected=project_point normalized.0, world=world.0, z=normalized.0.z},
+      {projected=project_point normalized.1, world=world.1, z=normalized.1.z},
+      {projected=project_point normalized.2, world=world.2, z=normalized.2.z})
 
 -- | Project triangles currently visible from the camera.
 def project_triangles_in_view 'a
@@ -110,14 +106,14 @@ def project_triangles_in_view 'a
   let triangles_projected = map (project_triangle (f32.i64 h / 2) (f32.i64 w / 2) view_dist camera) triangles
 
   let close_enough_dist (p: point_projected): bool =
-    0.0 <= p.extra.z && p.extra.z < draw_dist
+    0.0 <= p.z && p.z < draw_dist
 
   let close_enough_fully_out_of_frame
       ((p0, p1, p2): triangle_projected): bool =
-    (p0.extra.projected.x < 0 && p1.extra.projected.x < 0 && p2.extra.projected.x < 0) ||
-    (p0.extra.projected.x >= i32.i64 w && p1.extra.projected.x >= i32.i64 w && p2.extra.projected.x >= i32.i64 w) ||
-    (p0.extra.projected.y < 0 && p1.extra.projected.y < 0 && p2.extra.projected.y < 0) ||
-    (p0.extra.projected.y >= i32.i64 h && p1.extra.projected.y >= i32.i64 h && p2.extra.projected.y >= i32.i64 h)
+    (p0.projected.x < 0 && p1.projected.x < 0 && p2.projected.x < 0) ||
+    (p0.projected.x >= i32.i64 w && p1.projected.x >= i32.i64 w && p2.projected.x >= i32.i64 w) ||
+    (p0.projected.y < 0 && p1.projected.y < 0 && p2.projected.y < 0) ||
+    (p0.projected.y >= i32.i64 h && p1.projected.y >= i32.i64 h && p2.projected.y >= i32.i64 h)
 
   let close_enough (triangle: triangle_projected): bool =
     (close_enough_dist triangle.0 ||
