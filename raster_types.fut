@@ -43,5 +43,3 @@ type pixel_final = base_component {i: i32, z: f32}
 type^ pixel_color_function 'a = (pixel_final, a) -> argb.colour
 
 type trig = {sin: vec3.vector, cos: vec3.vector}
-
-type camera = {position: vec3.vector, orientation: vec3.vector}

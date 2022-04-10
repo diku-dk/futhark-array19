@@ -1,18 +1,8 @@
 import "lib/github.com/athas/matte/colour"
+import "types"
 import "raster_types"
 import "scanline"
 import "barycentric"
-
-def bubble_point
-    (a: point_projected)
-    (b: point_projected): (point_projected, point_projected) =
-  if b.projected.y < a.projected.y then (b, a) else (a, b)
-
-def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
-  let (p, q) = bubble_point p q
-  let (q, r) = bubble_point q r
-  let (p, q) = bubble_point p q
-  in (p, q, r)
 
 def prepare_triangles [n] (triangles: [n]triangle_projected): [n]triangle_slopes =
   map normalize_triangle_points triangles

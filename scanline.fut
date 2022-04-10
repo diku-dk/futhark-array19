@@ -4,6 +4,17 @@ import "raster_types"
 -- Based on Martin Elsman's https://github.com/melsman/canvas demo, modified to
 -- fit within the bounds of this 3D rasterizer.
 
+def bubble_point
+    (a: point_projected)
+    (b: point_projected): (point_projected, point_projected) =
+  if b.projected.y < a.projected.y then (b, a) else (a, b)
+
+def normalize_triangle_points ((p, q, r): triangle_projected): triangle_projected =
+  let (p, q) = bubble_point p q
+  let (q, r) = bubble_point q r
+  let (p, q) = bubble_point p q
+  in (p, q, r)
+
 def slope (a: point_projected_with_bary) (b: point_projected_with_bary): slope =
   let dy = b.extra.projected.y - a.extra.projected.y
   in if dy == 0
