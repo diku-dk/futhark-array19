@@ -143,7 +143,7 @@ def render_projected_triangles [n] 'a
   let points =
     lines_of_triangles triangles_prepared aux'
     |> points_of_lines
-    |> filter (\(p, (aux_internal, _)) ->
+    |> filter (\(p, _) ->
                  let {x, y} = p.extra
                  in x >= 0 && x < i32.i64 w
                     && y >=0 && y < i32.i64 h)
@@ -158,8 +158,7 @@ def render_projected_triangles [n] 'a
         points
 
   let z_check ((a, aux_a): (pixel_final, a))
-              ((b, aux_b): (pixel_final, a))
-              : (pixel_final, a) =
+              ((b, aux_b): (pixel_final, a)): (pixel_final, a) =
     if (a.extra.z >= 0 && a.extra.z < b.extra.z) || b.extra.z < 0
     then (a, aux_a)
     else (b, aux_b)
